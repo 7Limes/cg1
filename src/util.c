@@ -8,8 +8,7 @@ typedef unsigned char byte;
 
 
 // Based on https://stackoverflow.com/a/3464656
-// Reads data from `file_path` into `output_buffer` and stores the file length in `length`.
-// Gives ownership to `output_buffer`.
+// Reads data from `file_path` into `output_buffer` and stores the length in `length`.
 int read_file_bytes(byte **output_buffer, size_t *length, const char *file_path) {
     if (!output_buffer || !length || !file_path) {
         return -1;  // Invalid arguments
@@ -19,7 +18,7 @@ int read_file_bytes(byte **output_buffer, size_t *length, const char *file_path)
     if (!handler) {
         return -2;  // File cannot be opened
     }
-
+    
     if (fseek(handler, 0, SEEK_END) != 0) {
         fclose(handler);
         return -3;  // Seek error
@@ -71,6 +70,7 @@ cJSON* json_from_file(const char *file_path) {
 }
 
 
+// Iterator over a string split at each occurrence of a character
 typedef struct {
     const char *source;
     size_t source_length;
@@ -104,11 +104,35 @@ int ss_next(char *dest, SplitString *ss, size_t dest_size) {
     }
     
     size_t substring_length = delimiter_index-ss->index;
-    int return_code = substring_length > dest_size ? 1 : 0;
+    int return_code = substring_length > dest_size;
     substring_length = substring_length > dest_size ? dest_size : substring_length;
 
     dest[0] = '\0';  // Set first character to null terminator so `strncat` just copies.
     strncat(dest, ss->source+ss->index, substring_length);
     ss->index = delimiter_index+1;
     return return_code;
+}
+
+
+// Iterator over a sized group of bytes
+typedef struct {
+    byte *bytes;
+    size_t length, index;
+} BytesIterator;
+
+
+void bi_new(BytesIterator *iter, char, char *bytes, size_t length) {
+    iter->bytes = bytes;
+    iter->length = length;
+    iter->index = 0;
+}
+
+
+int bi_next_n(void *dest, BytesIterator *iter, size_t n) {
+    if (n + iter->index > iter->length) {
+        return -1;
+    }
+    memcpy(dest, iter->bytes+iter->index, n);
+    iter->index += n;
+    return iter->length == iter->index;
 }
