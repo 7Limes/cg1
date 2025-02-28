@@ -12,53 +12,17 @@ https://github.com/7Limes
 #include <stdbool.h>
 #include <SDL2/SDL.h>
 #include "cJSON.h"
+#include "instruction.h"
 #include "util.h"
 
 
 #define FLAG_BUFFER_SIZE 64
 
 #define INSTRUCTION_ARGUMENT_BUFFER_SIZE 5
-#define AMOUNT_INSTRUCTIONS 15
-const char *INSTRUCTIONS[AMOUNT_INSTRUCTIONS] = {
-    "mov",
-    "movp",
-    "add",
-    "sub",
-    "mul",
-    "div",
-    "mod",
-    "less",
-    "equal",
-    "not",
-    "jmp",
-    "color",
-    "point",
-    "line",
-    "rect",
-};
-
-const byte ARGUMENT_COUNTS[AMOUNT_INSTRUCTIONS] = {2, 2, 3, 3, 3, 3, 3, 3, 3, 2, 2, 3, 2, 4, 4};
-
-
-/*
-    type:
-        0=int
-        1=address
-*/
-struct Argument {
-    byte type;
-    int32_t value;
-};
-
-struct Instruction {
-    byte opcode;
-    struct Argument *arguments;
-};
-
 
 typedef struct {
     size_t instruction_count;
-    struct Instruction *instructions;
+    Instruction *instructions;
 
     int32_t start_index, tick_index;
     int32_t memory_size, width, height, tickrate;
@@ -82,83 +46,6 @@ typedef struct {
 
 
 typedef void (*InstructionFunction)(ProgramContext *, int32_t *);
-
-
-int32_t get_json_int(cJSON *json, const char *name) {
-    cJSON *item = cJSON_GetObjectItem(json, name);
-    if (item == NULL) {
-        return -1;
-    }
-    return (int32_t) cJSON_GetNumberValue(item);
-}
-
-
-int parse_json_arguments(cJSON *arguments_json, struct Argument *instruction_args, byte argument_count) {
-    for (size_t i = 0; i < argument_count; i++) {
-        cJSON *argument_value = cJSON_GetArrayItem(arguments_json, i);
-
-        if (cJSON_IsNumber(argument_value)) {
-            struct Argument arg = {0, (int32_t) cJSON_GetNumberValue(argument_value)};
-            instruction_args[i] = arg;
-        }
-        else if (cJSON_IsString(argument_value)) {
-            char *address_string = cJSON_GetStringValue(argument_value);
-            struct Argument arg = {1, (int32_t) atoi(address_string+1)};
-            instruction_args[i] = arg;
-        }
-        else {
-            char *argument_value_string = cJSON_Print(argument_value);
-            printf("Got unexpected type at index %ld when parsing instruction arguments: \"%s\"\n", i, argument_value_string);
-            return -1;
-        }
-    }
-    return 0;
-}
-
-
-byte get_opcode(char *instruction_name) {
-    for (size_t i = 0; i < AMOUNT_INSTRUCTIONS; i++) {
-        if (strcmp(INSTRUCTIONS[i], instruction_name) == 0) {
-            return i;
-        }
-    }
-    return 255;
-}
-
-
-struct Instruction* parse_instructions(cJSON *instructions_json) {
-    size_t instruction_count = cJSON_GetArraySize(instructions_json);
-    struct Instruction *instructions = malloc(sizeof(struct Instruction) * instruction_count);
-    if (!instructions) {
-        printf("Failed to allocate memory for instructions.\n");
-        return NULL;
-    }
-
-    for (size_t i = 0; i < instruction_count; i++) {
-        cJSON *instruction_data = cJSON_GetArrayItem(instructions_json, i);
-        char *instruction_name = cJSON_GetStringValue(cJSON_GetArrayItem(instruction_data, 0));
-        byte opcode = get_opcode(instruction_name);
-        if (opcode == 255) {
-            free(instructions);
-            printf("Unrecognized instruction at index %ld: \"%s\"\n", i, instruction_name);
-            return NULL;
-        }
-        byte argument_count = ARGUMENT_COUNTS[opcode];
-        struct Argument *instruction_args = malloc(sizeof(struct Argument)*argument_count);
-        if (!instruction_args) {
-            printf("Failed to allocate memory for instruction arguments.\n");
-            return NULL;
-        }
-        int parse_arguments_response = parse_json_arguments(cJSON_GetArrayItem(instruction_data, 1), instruction_args, argument_count);
-        if (parse_arguments_response < 0) {
-            free(instructions);
-            return NULL;
-        }
-
-        instructions[i] = (struct Instruction) {opcode, instruction_args};
-    }
-    return instructions;
-}
 
 
 void add_initial_data(ProgramContext* program_context, cJSON* data_array) {
@@ -202,7 +89,7 @@ int create_program_state(ProgramState *program_state, ProgramData *program_data,
         return -2;
     }
     size_t instruction_count = cJSON_GetArraySize(instructions_json);
-    struct Instruction *instructions = parse_instructions(instructions_json);
+    Instruction *instructions = parse_instructions_json(instructions_json);
     if (!instructions) {
         return -3;
     }
@@ -232,9 +119,9 @@ int create_program_state(ProgramState *program_state, ProgramData *program_data,
 
 
 // Replaces `arguments` with either values in program memory or raw numbers then stores them in `parsed_arguments`.
-void parse_arguments(int32_t *parsed_arguments, ProgramContext *program_context, struct Argument *arguments, byte argument_count) {
+void parse_arguments(int32_t *parsed_arguments, ProgramContext *program_context, Argument *arguments, byte argument_count) {
     for (size_t i = 0; i < argument_count; i++) {
-        struct Argument arg = arguments[i];
+        Argument arg = arguments[i];
         if (arg.type) {
             parsed_arguments[i] = program_context->memory[arg.value];
         }
@@ -307,12 +194,17 @@ void ins_rect(ProgramContext *program_context, int32_t *args) {
     SDL_RenderFillRect(program_context->renderer, &(SDL_Rect) {args[0], args[1], args[2], args[3]});
 }
 
+void ins_log(ProgramContext *program_context, int32_t *args) {
+    printf("%d\n", args[0]);
+}
+
 InstructionFunction INSTRUCTION_FUNCTIONS[AMOUNT_INSTRUCTIONS] = {
     ins_mov, ins_movp,
     ins_add, ins_sub, ins_mul, ins_div, ins_mod,
     ins_less, ins_equal, ins_not,
     ins_jmp,
-    ins_color, ins_point, ins_line, ins_rect
+    ins_color, ins_point, ins_line, ins_rect,
+    ins_log
 };
 
 
@@ -323,7 +215,7 @@ void run_program_thread(const ProgramState *program_state, size_t index) {
     program_context->program_counter = index;
     size_t instruction_count = program_data->instruction_count;
     while (program_context->program_counter < instruction_count) {
-        struct Instruction instruction = program_data->instructions[program_context->program_counter];
+        Instruction instruction = program_data->instructions[program_context->program_counter];
         uint32_t parsed_arguments[INSTRUCTION_ARGUMENT_BUFFER_SIZE];
         parse_arguments(parsed_arguments, program_context, instruction.arguments, ARGUMENT_COUNTS[instruction.opcode]);
         INSTRUCTION_FUNCTIONS[instruction.opcode](program_context, parsed_arguments);
@@ -356,11 +248,7 @@ void update_reserved_memory(const ProgramState *program_state, const Uint8 *keys
 void free_program_state(const ProgramState *program_state) {
     ProgramData *program_data = program_state->data;
     ProgramContext *program_context = program_state->context;
-    for (size_t i = 0; i < program_data->instruction_count; i++) {
-        free(program_data->instructions[i].arguments);
-    }
     free(program_data->instructions);
-
     free(program_context->memory);
 }
 
@@ -494,6 +382,12 @@ int run_file(const char *file_path, const char* flags) {
         run_program_thread(&program_state, program_data.start_index);
     }
 
+    if (program_data.tick_index == -1) {
+        quit_sdl(win, renderer);
+        free_program_state(&program_state);
+        return 0;
+    }
+
     Uint32 target_frame_time = 1000 / program_data.tickrate;
     Uint64 last_frame_time, start_frame_time;
     int32_t delta_ms = 0;
@@ -524,6 +418,6 @@ int run_file(const char *file_path, const char* flags) {
     }
 
     quit_sdl(win, renderer);
-
     free_program_state(&program_state);
+    return 0;
 }
