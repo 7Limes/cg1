@@ -1,3 +1,6 @@
+#ifndef INSTRUCTION_HEADER
+#define INSTRUCTION_HEADER
+
 #include "util.h"
 
 
@@ -27,3 +30,5 @@ int parse_json_arguments(cJSON *arguments_json, Argument *instruction_args, byte
 byte get_opcode(char *instruction_name);
 
 Instruction* parse_instructions_json(cJSON *instructions_json);
+
+#endif

@@ -1,8 +1,9 @@
+#ifndef UTIL_HEADER
+#define UTIL_HEADER
+
 #include <inttypes.h>
 #include "cJSON.h"
 
-#ifndef UTIL_HEADER
-#define UTIL_HEADER
 
 typedef unsigned char byte;
 
