@@ -114,14 +114,33 @@ int ss_next(char *dest, SplitString *ss, size_t dest_size) {
 }
 
 
-// Iterator over a sized group of bytes
+int is_little_endian() {
+    byte swaptest[2] = {1, 0};
+    return *(short *)swaptest == 1;
+}
+
+
+// Same as memcpy, but copies bytes in reverse order.
+void* memcpy_reverse(void *restrict dest, const void *restrict src, size_t n) {
+    byte* dest_p = (byte*)dest;
+    const byte* src_p = (const byte*)src;
+
+    for (size_t i = 0; i < n; i++) {
+        dest_p[i] = src_p[n - 1 - i];
+    }
+
+    return dest;
+}
+
+
+// Iterator over a group of bytes.
 typedef struct {
     byte *bytes;
     size_t length, index;
 } BytesIterator;
 
 
-void bi_new(BytesIterator *iter, char, char *bytes, size_t length) {
+void bi_new(BytesIterator *iter, char *bytes, size_t length) {
     iter->bytes = bytes;
     iter->length = length;
     iter->index = 0;
@@ -132,7 +151,15 @@ int bi_next_n(void *dest, BytesIterator *iter, size_t n) {
     if (n + iter->index > iter->length) {
         return -1;
     }
-    memcpy(dest, iter->bytes+iter->index, n);
+
+    if (dest != NULL) {
+        if (is_little_endian()) {
+            memcpy_reverse(dest, iter->bytes+iter->index, n);
+        }
+        else {
+            memcpy(dest, iter->bytes+iter->index, n);
+        }
+    }
     iter->index += n;
     return iter->length == iter->index;
 }
