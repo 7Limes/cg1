@@ -114,3 +114,21 @@ Instruction* parse_instructions_json(cJSON *instructions_json) {
     }
     return instructions;
 }
+
+
+Instruction* parse_instructions_binary(size_t instruction_count, BytesIterator *iter) {
+    Instruction *instructions = malloc(sizeof(Instruction) * instruction_count);
+    for (size_t i = 0; i < instruction_count; i++) {
+        Instruction *ins = &instructions[i];
+        bi_next_n(&ins->opcode, iter, 1);
+        size_t argument_count = ARGUMENT_COUNTS[ins->opcode];
+        for (size_t j = 0; j < argument_count; j++) {
+            Argument arg;
+            bi_next_n(&arg.type, iter, 1);
+            bi_next_n(&arg.value, iter, 4);
+            ins->arguments[j] = arg;
+        }
+    }
+
+    return instructions;
+}
