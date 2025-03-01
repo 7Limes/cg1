@@ -6,6 +6,8 @@
 #include "cJSON.h"
 #include "instruction.h"
 
+
+// Stores static information about a program. (instructions, program metadata, etc.)
 typedef struct {
     size_t instruction_count;
     Instruction *instructions;
@@ -15,7 +17,7 @@ typedef struct {
 
 } ProgramData;
 
-
+// Stores dynamic information about a program. (memory, program counter, etc.)
 typedef struct {
     int32_t *memory;
     size_t program_counter;
@@ -31,10 +33,10 @@ typedef struct {
 } ProgramState;
 
 
-void add_data_entries_json(ProgramContext* program_context, cJSON* data_array);
-
-int init_program_context_json(ProgramContext *program_context, ProgramData *program_data, cJSON *data_array);
-
+// Initialize `program_state` from JSON format.
 int init_program_state_json(ProgramState *program_state, ProgramData *program_data, ProgramContext *program_context, cJSON *program_data_json);
+
+// Initialize `program_state` from binary format.
+int init_program_state_binary(ProgramState *program_state, ProgramData *program_data, ProgramContext *program_context, byte *program_bytes, size_t bytes_length);
 
 #endif

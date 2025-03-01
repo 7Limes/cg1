@@ -64,7 +64,9 @@ void ins_div(ProgramContext *program_context, int32_t *args) {
 }
 
 void ins_mod(ProgramContext *program_context, int32_t *args) {
-    program_context->memory[args[0]] = args[1] % args[2];
+    int32_t mod = args[1] % args[2];
+    mod = (mod < 0) ? mod + args[2] : mod;
+    program_context->memory[args[0]] = mod;
 }
 
 void ins_less(ProgramContext *program_context, int32_t *args) {
@@ -233,18 +235,30 @@ void parse_flags(struct FlagData* flag_data, const char* flags) {
 
 
 int run_file(const char *file_path, const char* flags) {
-    // Read JSON file
-    cJSON *json = json_from_file(file_path);
-    if (!json) {
-        return -1;
-    }
-
-    // Create program state
     ProgramState program_state;
     ProgramData program_data;
     ProgramContext program_context;
-    int program_state_response = init_program_state_json(&program_state, &program_data, &program_context, json);
-    cJSON_Delete(json);
+    int program_state_response;
+
+    const char *extension = strrchr(file_path, '.') + 1;
+    if (strcmp(extension, "g1b") == 0) {  // Binary format
+        byte *program_bytes;
+        size_t bytes_length;
+        int file_read_response = read_file_bytes(&program_bytes, &bytes_length, file_path);
+        if (file_read_response < 0) {
+            return -1;
+        }
+        program_state_response = init_program_state_binary(&program_state, &program_data, &program_context, program_bytes, bytes_length);
+    }
+    else {  // Assume JSON format
+        cJSON *json = json_from_file(file_path);
+        if (!json) {
+            return -1;
+        }
+        program_state_response = init_program_state_json(&program_state, &program_data, &program_context, json);
+        cJSON_Delete(json);
+    }
+
     if (program_state_response < 0) {
         return -2;
     }
@@ -261,6 +275,7 @@ int run_file(const char *file_path, const char* flags) {
         free_program_state(&program_state);
         return -3;
     }
+
 
     // Create SDL renderer
     SDL_Renderer *renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
