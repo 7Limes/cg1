@@ -16,7 +16,7 @@ bool file_exists(char* path) {
 bool safecat(char* dest, char* src, int size) {
     if (strlen(dest) + strlen(src) >= size)
         return false;
-    strncat(dest, src, size);
+    strncat(dest, src, size-1);  // size-1 to avoid compiler warning on O2
     return true;
 }
 
