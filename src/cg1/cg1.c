@@ -256,8 +256,12 @@ struct FlagData {
 };
 
 void parse_flags(struct FlagData* flag_data, const char* flags) {
-    bool show_fps = false;
-    uint32_t pixel_size = 1;
+    flag_data->show_fps = false;
+    flag_data->pixel_size = 1;
+
+    if (flags[0] == '\0') {  // No flags provided
+        return;
+    }
 
     SplitString ss;
     ss_new(&ss, flags, ' ');
@@ -270,7 +274,7 @@ void parse_flags(struct FlagData* flag_data, const char* flags) {
         }
 
         if (strcmp(flag_buffer, "-f") == 0) {
-            show_fps = true;
+            flag_data->show_fps = true;
         }
         else if (strcmp(flag_buffer, "-s") == 0) {
             ss_next_response = ss_next(flag_buffer, &ss, FLAG_BUFFER_SIZE);  // `flag_buffer` should now contain pixel size as a string
@@ -283,15 +287,12 @@ void parse_flags(struct FlagData* flag_data, const char* flags) {
                 printf("Expected numeric or nonzero value for pixel size flag.\n");
                 continue;
             }
-            pixel_size = possible_pixel_size;
+            flag_data->pixel_size = possible_pixel_size;
         }
         else {
             printf("Unrecognized flag \"%s\".\n", flag_buffer);
         }
     }
-
-    flag_data->show_fps = show_fps;
-    flag_data->pixel_size = pixel_size;
 }
 
 
