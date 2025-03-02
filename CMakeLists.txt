@@ -24,6 +24,12 @@ set(SOURCES
     src/util/util.c
 )
 
+# Option to enable runtime errors
+option(ENABLE_G1_RUNTIME_ERRORS "Enable runtime errors" ON)
+if(ENABLE_G1_RUNTIME_ERRORS)
+    add_definitions(-DENABLE_G1_RUNTIME_ERRORS)
+endif()
+
 # Set the build type for optimization (-O2 equivalent)
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)

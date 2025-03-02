@@ -2,7 +2,6 @@
 A g1 virtual machine implementation made with SDL2.
 
 By Miles Burkart
-11-27-2024
 https://github.com/7Limes
 */
 
@@ -44,10 +43,12 @@ int parse_arguments(int32_t *parsed_arguments, ProgramContext *program_context, 
     for (size_t i = 0; i < argument_count; i++) {
         Argument arg = arguments[i];
         if (arg.type == 1) {  // Address
-            if (arg.value < 0 || arg.value >= program_context->memory_size) {
-                out_of_bounds_error(arg.value);
-                return -1;
-            }
+            #ifdef ENABLE_G1_RUNTIME_ERRORS
+                if (arg.value < 0 || arg.value >= program_context->memory_size) {
+                    out_of_bounds_error(arg.value);
+                    return -1;
+                }
+            #endif
             parsed_arguments[i] = program_context->memory[arg.value];
         }
         else {  // Integer literal
@@ -59,10 +60,12 @@ int parse_arguments(int32_t *parsed_arguments, ProgramContext *program_context, 
 
 
 int set_memory_value(int32_t dest, int32_t value, ProgramContext *program_context) {
-    if (dest < 0 || dest >= program_context->memory_size) {
-        out_of_bounds_error(dest);
-        return -1;
-    }
+    #ifdef ENABLE_G1_RUNTIME_ERRORS
+        if (dest < 0 || dest >= program_context->memory_size) {
+            out_of_bounds_error(dest);
+            return -1;
+        }
+    #endif
     program_context->memory[dest] = value;
     return 0;
 }
@@ -73,10 +76,12 @@ int ins_mov(ProgramContext *program_context, int32_t *args) {
 }
 
 int ins_movp(ProgramContext *program_context, int32_t *args) {
-    if (args[1] < 0 || args[1] >= program_context->memory_size) {
-        out_of_bounds_error(args[1]);
-        return -2;
-    }
+    #ifdef ENABLE_G1_RUNTIME_ERRORS
+        if (args[1] < 0 || args[1] >= program_context->memory_size) {
+            out_of_bounds_error(args[1]);
+            return -2;
+        }
+    #endif
     return set_memory_value(args[0], program_context->memory[args[1]], program_context);
 }
 
@@ -93,18 +98,22 @@ int ins_mul(ProgramContext *program_context, int32_t *args) {
 }
 
 int ins_div(ProgramContext *program_context, int32_t *args) {
-    if (args[2] == 0) {
-        zero_division_error();
-        return -2;
-    }
+    #ifdef ENABLE_G1_RUNTIME_ERRORS
+        if (args[2] == 0) {
+            zero_division_error();
+            return -2;
+        }
+    #endif
     return set_memory_value(args[0], args[1] / args[2], program_context);
 }
 
 int ins_mod(ProgramContext *program_context, int32_t *args) {
-    if (args[2] == 0) {
-        zero_division_error();
-        return -1;
-    }
+    #ifdef ENABLE_G1_RUNTIME_ERRORS
+        if (args[2] == 0) {
+            zero_division_error();
+            return -1;
+        }
+    #endif
     int32_t mod = args[1] % args[2];
     mod = (mod < 0) ? mod + args[2] : mod;
     return set_memory_value(args[0], mod, program_context);
