@@ -15,6 +15,7 @@ typedef struct {
 typedef struct {
     int32_t *memory;
     size_t program_counter;
+    size_t memory_size;  // Also store memory size here so we can do bounds checks
 
     SDL_Renderer *renderer;
 
@@ -46,9 +47,10 @@ void add_data_entries_json(ProgramContext* program_context, cJSON* data_array) {
     }
 }
 
-
-int init_program_context_json(ProgramContext *program_context, ProgramData *program_data, cJSON *data_array) {
-    program_context->memory = calloc(program_data->memory_size, sizeof(int32_t));
+// TODO: extract top part of this function out
+int init_program_context_json(ProgramContext *program_context, int32_t memory_size, cJSON *data_array) {
+    program_context->memory = calloc(memory_size, sizeof(int32_t));
+    program_context->memory_size = memory_size;
     if (!program_context->memory) {
         printf("Failed to allocate program memory.\n");
         return -1;
@@ -58,7 +60,7 @@ int init_program_context_json(ProgramContext *program_context, ProgramData *prog
 }
 
 
-int init_program_state_json(ProgramState *program_state, ProgramData *program_data, ProgramContext *program_context, cJSON *program_data_json) {
+int init_program_state_json(ProgramState *program_state, cJSON *program_data_json) {
     cJSON *instructions_json = cJSON_GetObjectItem(program_data_json, "instructions");
     if (!instructions_json) {
         printf("Could not find instructions array in JSON.\n");
@@ -74,6 +76,7 @@ int init_program_state_json(ProgramState *program_state, ProgramData *program_da
         return -3;
     }
 
+    ProgramData *program_data = program_state->data;
     program_data->instruction_count = instruction_count;
     program_data->instructions = instructions;
 
@@ -87,13 +90,11 @@ int init_program_state_json(ProgramState *program_state, ProgramData *program_da
     program_data->tickrate = get_json_int(meta, "tickrate");
 
     cJSON *data_array = cJSON_GetObjectItem(program_data_json, "data");  // Data entries are optional, so it's okay if this is `NULL`.
-    int program_context_response = init_program_context_json(program_context, program_data, data_array);
+    int program_context_response = init_program_context_json(program_state->context, program_data->memory_size, data_array);
     if (program_context_response < 0) {
         return -4;
     }
 
-    program_state->data = program_data;
-    program_state->context = program_context;
     return 0;
 }
 
@@ -112,8 +113,9 @@ void add_data_entries_binary(ProgramContext* program_context, uint32_t data_entr
 }
 
 
-int init_program_context_binary(ProgramContext *program_context, ProgramData *program_data, uint32_t data_entry_count, BytesIterator *iter) {
-    program_context->memory = calloc(program_data->memory_size, sizeof(int32_t));
+int init_program_context_binary(ProgramContext *program_context, int32_t memory_size, uint32_t data_entry_count, BytesIterator *iter) {
+    program_context->memory = calloc(memory_size, sizeof(int32_t));
+    program_context->memory_size = memory_size;
     if (!program_context->memory) {
         printf("Failed to allocate program memory.\n");
         return -1;
@@ -123,7 +125,7 @@ int init_program_context_binary(ProgramContext *program_context, ProgramData *pr
 }
 
 
-int init_program_state_binary(ProgramState *program_state, ProgramData *program_data, ProgramContext *program_context, byte *program_bytes, size_t bytes_length) {
+int init_program_state_binary(ProgramState *program_state, byte *program_bytes, size_t bytes_length) {
     // Create the iterator
     BytesIterator iter;
     bi_new(&iter, program_bytes, bytes_length);
@@ -140,6 +142,7 @@ int init_program_state_binary(ProgramState *program_state, ProgramData *program_
     }
 
     // Get program metadata
+    ProgramData *program_data = program_state->data;
     bi_next_n(&program_data->memory_size, &iter, 4);
     bi_next_n(&u16_buffer, &iter, 2);
     program_data->width = (uint32_t) u16_buffer;
@@ -163,11 +166,7 @@ int init_program_state_binary(ProgramState *program_state, ProgramData *program_
     // Set data entries
     uint32_t data_entry_count;
     bi_next_n(&data_entry_count, &iter, 4);
-    init_program_context_binary(program_context, program_data, data_entry_count, &iter);
-
-    // Set program_state values
-    program_state->data = program_data;
-    program_state->context = program_context;
+    init_program_context_binary(program_state->context, program_data->memory_size, data_entry_count, &iter);
 
     return 0;
 }

@@ -21,11 +21,11 @@ typedef struct {
 typedef struct {
     int32_t *memory;
     size_t program_counter;
+    size_t memory_size;  // Also store memory size here so we can do bounds checks
 
     SDL_Renderer *renderer;
 
 } ProgramContext;
-
 
 typedef struct {
     ProgramData *data;
@@ -34,9 +34,9 @@ typedef struct {
 
 
 // Initialize `program_state` from JSON format.
-int init_program_state_json(ProgramState *program_state, ProgramData *program_data, ProgramContext *program_context, cJSON *program_data_json);
+int init_program_state_json(ProgramState *program_state, cJSON *program_data_json);
 
 // Initialize `program_state` from binary format.
-int init_program_state_binary(ProgramState *program_state, ProgramData *program_data, ProgramContext *program_context, byte *program_bytes, size_t bytes_length);
+int init_program_state_binary(ProgramState *program_state, byte *program_bytes, size_t bytes_length);
 
 #endif
