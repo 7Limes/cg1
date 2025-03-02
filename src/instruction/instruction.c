@@ -78,7 +78,7 @@ int parse_json_arguments(cJSON *arguments_json, Argument *instruction_args, byte
 
 
 byte get_opcode(char *instruction_name) {
-    for (size_t i = 0; i < AMOUNT_INSTRUCTIONS; i++) {
+    for (byte i = 0; i < AMOUNT_INSTRUCTIONS; i++) {
         if (strcmp(INSTRUCTIONS[i], instruction_name) == 0) {
             return i;
         }
