@@ -28,6 +28,18 @@ typedef struct {
 } ProgramState;
 
 
+// Allocates memory for the program and records it in `program_context`
+int init_program_context(ProgramContext *program_context, int32_t memory_size) {
+    program_context->memory = calloc(memory_size, sizeof(int32_t));
+    program_context->memory_size = memory_size;
+    if (!program_context->memory) {
+        printf("Failed to allocate program memory.\n");
+        return -1;
+    }
+    return 0;
+}
+
+
 // Load all data entries from `data_array` into memory
 void add_data_entries_json(ProgramContext* program_context, cJSON* data_array) {
     if (data_array == NULL) {
@@ -45,18 +57,6 @@ void add_data_entries_json(ProgramContext* program_context, cJSON* data_array) {
             program_context->memory[item_address] = cJSON_GetNumberValue(memory_item);
         }
     }
-}
-
-// TODO: extract top part of this function out
-int init_program_context_json(ProgramContext *program_context, int32_t memory_size, cJSON *data_array) {
-    program_context->memory = calloc(memory_size, sizeof(int32_t));
-    program_context->memory_size = memory_size;
-    if (!program_context->memory) {
-        printf("Failed to allocate program memory.\n");
-        return -1;
-    }
-    add_data_entries_json(program_context, data_array);
-    return 0;
 }
 
 
@@ -89,11 +89,12 @@ int init_program_state_json(ProgramState *program_state, cJSON *program_data_jso
     program_data->height = get_json_int(meta, "height");
     program_data->tickrate = get_json_int(meta, "tickrate");
 
-    cJSON *data_array = cJSON_GetObjectItem(program_data_json, "data");  // Data entries are optional, so it's okay if this is `NULL`.
-    int program_context_response = init_program_context_json(program_state->context, program_data->memory_size, data_array);
+    int program_context_response = init_program_context(program_state->context, program_data->memory_size);
     if (program_context_response < 0) {
         return -4;
     }
+    cJSON *data_array = cJSON_GetObjectItem(program_data_json, "data");  // Data entries are optional, so it's okay if this is `NULL`.
+    add_data_entries_json(program_state->context, data_array);
 
     return 0;
 }
@@ -110,18 +111,6 @@ void add_data_entries_binary(ProgramContext* program_context, uint32_t data_entr
             program_context->memory[entry_address+j] = value;
         }
     }
-}
-
-
-int init_program_context_binary(ProgramContext *program_context, int32_t memory_size, uint32_t data_entry_count, BytesIterator *iter) {
-    program_context->memory = calloc(memory_size, sizeof(int32_t));
-    program_context->memory_size = memory_size;
-    if (!program_context->memory) {
-        printf("Failed to allocate program memory.\n");
-        return -1;
-    }
-    add_data_entries_binary(program_context, data_entry_count, iter);
-    return 0;
 }
 
 
@@ -160,13 +149,16 @@ int init_program_state_binary(ProgramState *program_state, byte *program_bytes, 
     if (!instructions) {
         return -2;
     }
-
     program_data->instructions = instructions;
 
     // Set data entries
     uint32_t data_entry_count;
     bi_next_n(&data_entry_count, &iter, 4);
-    init_program_context_binary(program_state->context, program_data->memory_size, data_entry_count, &iter);
+    int program_context_response = init_program_context(program_state->context, program_data->memory_size);
+    if (program_context_response < 0) {
+        return -3;
+    }
+    add_data_entries_binary(program_state->context, data_entry_count, &iter);
 
     return 0;
 }
