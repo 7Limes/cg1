@@ -24,6 +24,12 @@ https://github.com/7Limes
 typedef int (*InstructionFunction)(ProgramContext *, int32_t *);
 
 
+struct FlagData {
+    bool show_fps, disable_log;
+    uint32_t pixel_size;
+};
+
+
 void error(char *message) {
     printf("\x1b[31mRUNTIME ERROR: %s\n", message);
 }
@@ -169,8 +175,10 @@ InstructionFunction INSTRUCTION_FUNCTIONS[AMOUNT_INSTRUCTIONS] = {
     ins_log
 };
 
+#define LOG_OPCODE 15
 
-int run_program_thread(const ProgramState *program_state, size_t index) {
+
+int run_program_thread(const ProgramState *program_state, size_t index, struct FlagData *flag_data) {
     ProgramContext *program_context = program_state->context;
     ProgramData *program_data = program_state->data;
 
@@ -178,6 +186,11 @@ int run_program_thread(const ProgramState *program_state, size_t index) {
     size_t instruction_count = program_data->instruction_count;
     while (program_context->program_counter < instruction_count) {
         Instruction instruction = program_data->instructions[program_context->program_counter];
+        if (instruction.opcode == LOG_OPCODE && flag_data->disable_log) {
+            program_context->program_counter++;
+            continue;
+        }
+
         uint32_t parsed_arguments[INSTRUCTION_ARGUMENT_BUFFER_SIZE];
         int parse_args_response = parse_arguments(parsed_arguments, program_context, instruction.arguments, ARGUMENT_COUNTS[instruction.opcode]);
         if (parse_args_response < 0) {
@@ -187,6 +200,7 @@ int run_program_thread(const ProgramState *program_state, size_t index) {
         if (instruction_response != 0) {
             return -2;
         }
+        
         program_context->program_counter++;
     }
 
@@ -250,13 +264,9 @@ void quit_sdl(SDL_Window *win, SDL_Renderer *renderer) {
 }
 
 
-struct FlagData {
-    bool show_fps;
-    uint32_t pixel_size;
-};
-
 void parse_flags(struct FlagData* flag_data, const char* flags) {
     flag_data->show_fps = false;
+    flag_data->disable_log = false;
     flag_data->pixel_size = 1;
 
     if (flags[0] == '\0') {  // No flags provided
@@ -273,10 +283,10 @@ void parse_flags(struct FlagData* flag_data, const char* flags) {
             break;
         }
 
-        if (strcmp(flag_buffer, "-f") == 0) {
+        if (strcmp(flag_buffer, "-show_fps") == 0) {
             flag_data->show_fps = true;
         }
-        else if (strcmp(flag_buffer, "-s") == 0) {
+        else if (strcmp(flag_buffer, "-scale") == 0) {
             ss_next_response = ss_next(flag_buffer, &ss, FLAG_BUFFER_SIZE);  // `flag_buffer` should now contain pixel size as a string
             if (ss_next_response != 0) {
                 printf("Expected a value for pixel size flag.\n");
@@ -288,6 +298,9 @@ void parse_flags(struct FlagData* flag_data, const char* flags) {
                 continue;
             }
             flag_data->pixel_size = possible_pixel_size;
+        }
+        else if (strcmp(flag_buffer, "-disable_log") == 0) {
+            flag_data->disable_log = true;
         }
         else {
             printf("Unrecognized flag \"%s\".\n", flag_buffer);
@@ -352,7 +365,7 @@ int init_sdl(SDL_Window **win, SDL_Renderer **renderer, uint32_t window_width, u
 }
 
 
-int program_tick_loop(ProgramState *program_state, const Uint8 *keyboard) {
+int program_tick_loop(ProgramState *program_state, const Uint8 *keyboard, struct FlagData *flag_data) {
     ProgramData *program_data = program_state->data;
     ProgramContext *program_context = program_state->context;
 
@@ -376,7 +389,7 @@ int program_tick_loop(ProgramState *program_state, const Uint8 *keyboard) {
         }
         SDL_PumpEvents();
         update_reserved_memory(program_state, keyboard, delta_ms);
-        int run_thread_response = run_program_thread(program_state, program_data->tick_index);
+        int run_thread_response = run_program_thread(program_state, program_data->tick_index, flag_data);
         if (run_thread_response < 0) {
             return -1;
         }
@@ -423,7 +436,7 @@ int run_file(const char *file_path, const char* flags) {
     // Jump to start label if it is there
     if (program_data.start_index != -1) {
         update_reserved_memory(&program_state, keyboard, 0);
-        int run_thread_response = run_program_thread(&program_state, program_data.start_index);
+        int run_thread_response = run_program_thread(&program_state, program_data.start_index, &flag_data);
         if (run_thread_response < 0) {
             quit_sdl(win, renderer);
             free_program_state(&program_state);
@@ -437,7 +450,7 @@ int run_file(const char *file_path, const char* flags) {
         return 1;
     }
 
-    int tick_loop_response = program_tick_loop(&program_state, keyboard);
+    int tick_loop_response = program_tick_loop(&program_state, keyboard, &flag_data);
     if (tick_loop_response < 0) {
         quit_sdl(win, renderer);
         free_program_state(&program_state);
