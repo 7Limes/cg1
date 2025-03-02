@@ -28,12 +28,6 @@ typedef struct {
 // Get a uint32 from `json`.
 int32_t get_json_int(cJSON *json, const char *name);
 
-// Convert arguments from json format into actual `Argument` structs.
-int parse_json_arguments(cJSON *arguments_json, Argument *instruction_args, byte argument_count);
-
-// Convert `instruction_name` into its corresponding opcode.
-byte get_opcode(char *instruction_name);
-
 // Convert a json instructions array into an array of `Instruction` structs.
 Instruction* parse_instructions_json(cJSON *instructions_json);
 
