@@ -6,7 +6,7 @@
 #include "util.h"
 
 
-#define AMOUNT_INSTRUCTIONS 16
+#define AMOUNT_INSTRUCTIONS 17
 const char *INSTRUCTIONS[AMOUNT_INSTRUCTIONS] = {
     "mov",
     "movp",
@@ -23,10 +23,11 @@ const char *INSTRUCTIONS[AMOUNT_INSTRUCTIONS] = {
     "point",
     "line",
     "rect",
-    "log"
+    "log",
+    "getp"
 };
 
-const byte ARGUMENT_COUNTS[AMOUNT_INSTRUCTIONS] = {2, 2, 3, 3, 3, 3, 3, 3, 3, 2, 2, 3, 2, 4, 4, 1};
+const byte ARGUMENT_COUNTS[AMOUNT_INSTRUCTIONS] = {2, 2, 3, 3, 3, 3, 3, 3, 3, 2, 2, 3, 2, 4, 4, 1, 3};
 
 
 /*

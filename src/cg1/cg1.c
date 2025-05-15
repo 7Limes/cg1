@@ -14,9 +14,10 @@ https://github.com/7Limes
 #include "program.h"
 #include "instruction.h"
 #include "util.h"
+#include "cpu_primitives.h"
 
 
-#define FLAG_BUFFER_SIZE 64
+#define FLAG_BUFFER_SIZE 128
 
 #define INSTRUCTION_ARGUMENT_BUFFER_SIZE 5
 
@@ -43,6 +44,7 @@ void out_of_bounds_error(int32_t address) {
 void zero_division_error() {
     error("Division by zero.");
 }
+
 
 // Replaces `arguments` with either values in program memory or raw numbers then stores them in `parsed_arguments`.
 int parse_arguments(int32_t *parsed_arguments, ProgramContext *program_context, Argument *arguments, byte argument_count) {
@@ -72,6 +74,7 @@ int set_memory_value(int32_t dest, int32_t value, ProgramContext *program_contex
             return -1;
         }
     #endif
+
     program_context->memory[dest] = value;
     return 0;
 }
@@ -88,6 +91,7 @@ int ins_movp(ProgramContext *program_context, int32_t *args) {
             return -2;
         }
     #endif
+
     return set_memory_value(args[0], program_context->memory[args[1]], program_context);
 }
 
@@ -110,6 +114,7 @@ int ins_div(ProgramContext *program_context, int32_t *args) {
             return -2;
         }
     #endif
+
     return set_memory_value(args[0], args[1] / args[2], program_context);
 }
 
@@ -120,8 +125,11 @@ int ins_mod(ProgramContext *program_context, int32_t *args) {
             return -1;
         }
     #endif
+
     int32_t mod = args[1] % args[2];
-    mod = (mod < 0) ? mod + args[2] : mod;
+    if (mod != 0 && (mod < 0) ^ (args[2] < 0)) {
+        mod += args[2];
+    }
     return set_memory_value(args[0], mod, program_context);
 }
 
@@ -146,24 +154,38 @@ int ins_jmp(ProgramContext *program_context, int32_t *args) {
 }
 
 int ins_color(ProgramContext *program_context, int32_t *args) {
-    return SDL_SetRenderDrawColor(program_context->renderer, args[0], args[1], args[2], 255);
+    program_context->color = SDL_MapRGBA(program_context->render_surface->format, args[0], args[1], args[2], 255);
+    return 0;
 }
 
 int ins_point(ProgramContext *program_context, int32_t *args) {
-    return SDL_RenderDrawPoint(program_context->renderer, args[0], args[1]);
+    surf_draw_point(program_context->render_surface, args[0], args[1], program_context->color);
+    return 0;
 }
 
 int ins_line(ProgramContext *program_context, int32_t *args) {
-    return SDL_RenderDrawLine(program_context->renderer, args[0], args[1], args[2], args[3]);
+    surf_draw_line(program_context->render_surface, args[0], args[1], args[2], args[3], program_context->color);
+    return 0;
 }
 
 int ins_rect(ProgramContext *program_context, int32_t *args) {
-    return SDL_RenderFillRect(program_context->renderer, &(SDL_Rect) {args[0], args[1], args[2], args[3]});
+    surf_draw_rect(program_context->render_surface, args[0], args[1], args[2], args[3], program_context->color);
+    return 0;
 }
 
 int ins_log(ProgramContext *program_context, int32_t *args) {
     printf("%d\n", args[0]);
     return 0;
+}
+
+int ins_getp(ProgramContext *program_context, int32_t *args) {
+    SDL_Surface *surf = program_context->render_surface;
+    uint32_t *pixels = (uint32_t*) surf->pixels;
+    uint32_t raw_pixel = pixels[args[1] + (args[2] * surf->w)];
+    uint8_t r, g, b;
+    SDL_GetRGB(raw_pixel, surf->format, &r, &g, &b);
+    int32_t pixel_int = (int32_t) ((b << 16) | (g << 8) | r);
+    set_memory_value(args[0], pixel_int, program_context);
 }
 
 InstructionFunction INSTRUCTION_FUNCTIONS[AMOUNT_INSTRUCTIONS] = {
@@ -172,7 +194,8 @@ InstructionFunction INSTRUCTION_FUNCTIONS[AMOUNT_INSTRUCTIONS] = {
     ins_less, ins_equal, ins_not,
     ins_jmp,
     ins_color, ins_point, ins_line, ins_rect,
-    ins_log
+    ins_log,
+    ins_getp
 };
 
 #define LOG_OPCODE 15
@@ -181,26 +204,31 @@ InstructionFunction INSTRUCTION_FUNCTIONS[AMOUNT_INSTRUCTIONS] = {
 int run_program_thread(const ProgramState *program_state, size_t index, struct FlagData *flag_data) {
     ProgramContext *program_context = program_state->context;
     ProgramData *program_data = program_state->data;
-
+    
     program_context->program_counter = index;
     size_t instruction_count = program_data->instruction_count;
     while (program_context->program_counter < instruction_count) {
         Instruction instruction = program_data->instructions[program_context->program_counter];
+
+        // Skip log instructions if they're disabled
         if (instruction.opcode == LOG_OPCODE && flag_data->disable_log) {
             program_context->program_counter++;
             continue;
         }
 
+        // Parse instruction arguments
         uint32_t parsed_arguments[INSTRUCTION_ARGUMENT_BUFFER_SIZE];
         int parse_args_response = parse_arguments(parsed_arguments, program_context, instruction.arguments, ARGUMENT_COUNTS[instruction.opcode]);
         if (parse_args_response < 0) {
             return -1;
         }
+        
+        // Call the instruction function 
         int instruction_response = INSTRUCTION_FUNCTIONS[instruction.opcode](program_context, parsed_arguments);
         if (instruction_response != 0) {
             return -2;
         }
-        
+
         program_context->program_counter++;
     }
 
@@ -247,7 +275,7 @@ SDL_Window* create_window(uint32_t width, uint32_t height) {
         print_sdl_error("Failed to initialize SDL");
         return NULL;
     }
-    SDL_Window *win = SDL_CreateWindow("cg1", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
+    SDL_Window *win = SDL_CreateWindow("cg1", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_SHOWN);
 
     if (!win) {
         print_sdl_error("Failed to create window");
@@ -337,7 +365,7 @@ int init_program_state(const char *file_path, ProgramState *program_state) {
 }
 
 
-int init_sdl(SDL_Window **win, SDL_Renderer **renderer, uint32_t window_width, uint32_t window_height, uint32_t pixel_size) {
+int init_sdl(SDL_Window **win, SDL_Renderer **renderer, SDL_Surface **render_surface, uint32_t window_width, uint32_t window_height, uint32_t pixel_size) {
     *win = create_window(window_width, window_height);
     if (!win) {
         print_sdl_error("Failed to create SDL window");
@@ -345,8 +373,8 @@ int init_sdl(SDL_Window **win, SDL_Renderer **renderer, uint32_t window_width, u
     }
 
     // Create SDL renderer
-    *renderer = SDL_CreateRenderer(*win, -1, SDL_RENDERER_ACCELERATED);
-    if (!(*renderer)) {
+    *renderer = SDL_CreateRenderer(*win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (!renderer) {
         print_sdl_error("Failed to create SDL renderer");
         SDL_DestroyWindow(*win);
         SDL_Quit();
@@ -358,6 +386,12 @@ int init_sdl(SDL_Window **win, SDL_Renderer **renderer, uint32_t window_width, u
     if (set_scale_response < 0) {
         print_sdl_error("Failed to set renderer scale");
         quit_sdl(*win, *renderer);
+        return -3;
+    }
+
+    *render_surface = SDL_CreateRGBSurface(0, window_width, window_height, 32, 0, 0, 0, 0);
+    if (!render_surface) {
+        print_sdl_error("Failed to create render texture");
         return -3;
     }
 
@@ -373,6 +407,10 @@ int program_tick_loop(ProgramState *program_state, const Uint8 *keyboard, struct
     Uint64 last_frame_time, start_frame_time;
     int32_t delta_ms = 0;
 
+    SDL_Texture *present_texture;
+
+    SDL_Rect dest_rect = {0, 0, flag_data->pixel_size * program_data->width, flag_data->pixel_size * program_data->height};
+    
     bool running = true; 
     while (running) {
         start_frame_time = SDL_GetTicks64();
@@ -388,19 +426,23 @@ int program_tick_loop(ProgramState *program_state, const Uint8 *keyboard, struct
             }
         }
         SDL_PumpEvents();
+        
         update_reserved_memory(program_state, keyboard, delta_ms);
         int run_thread_response = run_program_thread(program_state, program_data->tick_index, flag_data);
         if (run_thread_response < 0) {
             return -1;
         }
 
+        present_texture = SDL_CreateTextureFromSurface(program_context->renderer, program_context->render_surface);
+        SDL_RenderCopy(program_context->renderer, present_texture, NULL, &dest_rect);
         SDL_RenderPresent(program_context->renderer);
+
         uint64_t frame_time = SDL_GetTicks64() - start_frame_time;
         if (frame_time < target_frame_time) {
             SDL_Delay(target_frame_time - frame_time);
         }
     }
-
+    
     return 0;
 }
 
@@ -411,8 +453,8 @@ int run_file(const char *file_path, const char* flags) {
     parse_flags(&flag_data, flags);
 
     // Create program state
-    ProgramData program_data;
-    ProgramContext program_context;
+    ProgramData program_data = {0};
+    ProgramContext program_context = {0};
     ProgramState program_state = {&program_data, &program_context};
     int program_state_response = init_program_state(file_path, &program_state);
     if (program_state_response < 0) {
@@ -422,17 +464,20 @@ int run_file(const char *file_path, const char* flags) {
     // Initialize SDL
     SDL_Window *win;
     SDL_Renderer *renderer;
+    SDL_Surface *render_surface;
     uint32_t window_width = program_data.width*flag_data.pixel_size;
     uint32_t window_height = program_data.height*flag_data.pixel_size;
-    int sdl_response = init_sdl(&win, &renderer, window_width, window_height, flag_data.pixel_size);
+    int sdl_response = init_sdl(&win, &renderer, &render_surface, window_width, window_height, flag_data.pixel_size);
     if (sdl_response < 0) {
         free_program_state(&program_state);
         return -2;
     }
     program_context.renderer = renderer;
+    program_context.render_surface = render_surface;
+    program_context.color = 0;
 
     const Uint8 *keyboard = SDL_GetKeyboardState(NULL);
-
+    
     // Jump to start label if it is there
     if (program_data.start_index != -1) {
         update_reserved_memory(&program_state, keyboard, 0);
@@ -443,7 +488,6 @@ int run_file(const char *file_path, const char* flags) {
             return -3;
         }
     }
-
     if (program_data.tick_index == -1) {
         quit_sdl(win, renderer);
         free_program_state(&program_state);

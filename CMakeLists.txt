@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
 project(MyProject)
 
 # Find the SDL2 package
@@ -12,6 +12,7 @@ include_directories(
     src/instruction
     src/program
     src/util
+    src/render
 )
 
 # Specify sources
@@ -22,6 +23,7 @@ set(SOURCES
     src/instruction/instruction.c
     src/program/program.c
     src/util/util.c
+    src/render/cpu_primitives.c
 )
 
 # Option to enable runtime errors

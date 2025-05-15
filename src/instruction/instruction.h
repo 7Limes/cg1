@@ -4,7 +4,7 @@
 #include "util.h"
 
 
-#define AMOUNT_INSTRUCTIONS 16
+#define AMOUNT_INSTRUCTIONS 17
 
 extern const byte ARGUMENT_COUNTS[];
 

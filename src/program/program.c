@@ -17,7 +17,9 @@ typedef struct {
     size_t program_counter;
     size_t memory_size;  // Also store memory size here so we can do bounds checks
 
+    Uint32 color;
     SDL_Renderer *renderer;
+    SDL_Surface *render_surface;
 
 } ProgramContext;
 
