@@ -23,7 +23,7 @@ bool safecat(char* dest, char* src, int size) {
 int main(int argc, char* argv[]) {
     char flags[FLAG_BUFFER_SIZE];
     if (argc == 1) {
-        printf("Usage: [program path] ((-show_fps) (-scale <value>) (-disable_log))\n");
+        printf("usage: cg1 [--show_fps] [--scale SCALE] [--disable_log] program_path\n");
         return 1;
     }
     else if (argc > 2) {

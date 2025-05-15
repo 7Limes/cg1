@@ -285,9 +285,16 @@ SDL_Window* create_window(uint32_t width, uint32_t height) {
     return win;
 }
 
-void quit_sdl(SDL_Window *win, SDL_Renderer *renderer) {
-    SDL_DestroyWindow(win);
-    SDL_DestroyRenderer(renderer);
+void quit_sdl(SDL_Window *win, SDL_Renderer *renderer, SDL_Surface *render_surface) {
+    if (win) {
+        SDL_DestroyWindow(win);
+    }
+    if (renderer) {
+        SDL_DestroyRenderer(renderer);
+    }
+    if (render_surface) {
+        SDL_FreeSurface(render_surface);
+    }
     SDL_Quit();
 }
 
@@ -311,10 +318,10 @@ void parse_flags(struct FlagData* flag_data, const char* flags) {
             break;
         }
 
-        if (strcmp(flag_buffer, "-show_fps") == 0) {
+        if (strcmp(flag_buffer, "--show_fps") == 0 || strcmp(flag_buffer, "-fps") == 0) {
             flag_data->show_fps = true;
         }
-        else if (strcmp(flag_buffer, "-scale") == 0) {
+        else if (strcmp(flag_buffer, "--scale") == 0 || strcmp(flag_buffer, "-s") == 0) {
             ss_next_response = ss_next(flag_buffer, &ss, FLAG_BUFFER_SIZE);  // `flag_buffer` should now contain pixel size as a string
             if (ss_next_response != 0) {
                 printf("Expected a value for pixel size flag.\n");
@@ -327,7 +334,7 @@ void parse_flags(struct FlagData* flag_data, const char* flags) {
             }
             flag_data->pixel_size = possible_pixel_size;
         }
-        else if (strcmp(flag_buffer, "-disable_log") == 0) {
+        else if (strcmp(flag_buffer, "--disable_log") == 0 || strcmp(flag_buffer, "-dl") == 0) {
             flag_data->disable_log = true;
         }
         else {
@@ -376,8 +383,7 @@ int init_sdl(SDL_Window **win, SDL_Renderer **renderer, SDL_Surface **render_sur
     *renderer = SDL_CreateRenderer(*win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (!renderer) {
         print_sdl_error("Failed to create SDL renderer");
-        SDL_DestroyWindow(*win);
-        SDL_Quit();
+        quit_sdl(*win, NULL, NULL);
         return -2;
     }
 
@@ -385,13 +391,14 @@ int init_sdl(SDL_Window **win, SDL_Renderer **renderer, SDL_Surface **render_sur
     int set_scale_response = SDL_RenderSetScale(*renderer, pixel_size, pixel_size);
     if (set_scale_response < 0) {
         print_sdl_error("Failed to set renderer scale");
-        quit_sdl(*win, *renderer);
+        quit_sdl(*win, *renderer, NULL);
         return -3;
     }
 
     *render_surface = SDL_CreateRGBSurface(0, window_width, window_height, 32, 0, 0, 0, 0);
     if (!render_surface) {
         print_sdl_error("Failed to create render texture");
+        quit_sdl(*win, *renderer, *render_surface);
         return -3;
     }
 
@@ -435,6 +442,7 @@ int program_tick_loop(ProgramState *program_state, const Uint8 *keyboard, struct
 
         present_texture = SDL_CreateTextureFromSurface(program_context->renderer, program_context->render_surface);
         SDL_RenderCopy(program_context->renderer, present_texture, NULL, &dest_rect);
+        SDL_DestroyTexture(present_texture);
         SDL_RenderPresent(program_context->renderer);
 
         uint64_t frame_time = SDL_GetTicks64() - start_frame_time;
@@ -483,25 +491,25 @@ int run_file(const char *file_path, const char* flags) {
         update_reserved_memory(&program_state, keyboard, 0);
         int run_thread_response = run_program_thread(&program_state, program_data.start_index, &flag_data);
         if (run_thread_response < 0) {
-            quit_sdl(win, renderer);
+            quit_sdl(win, renderer, render_surface);
             free_program_state(&program_state);
             return -3;
         }
     }
     if (program_data.tick_index == -1) {
-        quit_sdl(win, renderer);
+        quit_sdl(win, renderer, render_surface);
         free_program_state(&program_state);
         return 1;
     }
 
     int tick_loop_response = program_tick_loop(&program_state, keyboard, &flag_data);
     if (tick_loop_response < 0) {
-        quit_sdl(win, renderer);
+        quit_sdl(win, renderer, render_surface);
         free_program_state(&program_state);
         return -4;
     }
 
-    quit_sdl(win, renderer);
+    quit_sdl(win, renderer, render_surface);
     free_program_state(&program_state);
     return 0;
 }
