@@ -10,12 +10,16 @@ https://github.com/7Limes
 #include <string.h>
 #include <stdbool.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include "cJSON.h"
 #include "program.h"
 #include "instruction.h"
 #include "util.h"
-#include "cpu_primitives.h"
+#include "font_data.h"
 
+#ifndef ENABLE_G1_GPU_RENDERING
+    #include "cpu_primitives.h"
+#endif
 
 #define FLAG_BUFFER_SIZE 128
 
@@ -23,6 +27,9 @@ https://github.com/7Limes
 
 
 typedef int (*InstructionFunction)(ProgramContext *, int32_t *);
+
+
+const int FPS_FONT_SIZE = 20; 
 
 
 struct FlagData {
@@ -154,22 +161,38 @@ int ins_jmp(ProgramContext *program_context, int32_t *args) {
 }
 
 int ins_color(ProgramContext *program_context, int32_t *args) {
-    program_context->color = SDL_MapRGBA(program_context->render_surface->format, args[0], args[1], args[2], 255);
+    #ifdef ENABLE_G1_GPU_RENDERING
+        SDL_SetRenderDrawColor(program_context->renderer, args[0], args[1], args[2], 255);
+    #else
+        program_context->color = SDL_MapRGBA(program_context->render_surface->format, args[0], args[1], args[2], 255);
+    #endif
     return 0;
 }
 
 int ins_point(ProgramContext *program_context, int32_t *args) {
-    surf_draw_point(program_context->render_surface, args[0], args[1], program_context->color);
+    #ifdef ENABLE_G1_GPU_RENDERING
+        return SDL_RenderDrawPoint(program_context->renderer, args[0], args[1]);
+    #else
+        surf_draw_point(program_context->render_surface, args[0], args[1], program_context->color);
+    #endif
     return 0;
 }
 
 int ins_line(ProgramContext *program_context, int32_t *args) {
-    surf_draw_line(program_context->render_surface, args[0], args[1], args[2], args[3], program_context->color);
+    #ifdef ENABLE_G1_GPU_RENDERING
+        return SDL_RenderDrawLine(program_context->renderer, args[0], args[1], args[2], args[3]);
+    #else
+        surf_draw_line(program_context->render_surface, args[0], args[1], args[2], args[3], program_context->color);
+    #endif
     return 0;
 }
 
 int ins_rect(ProgramContext *program_context, int32_t *args) {
-    surf_draw_rect(program_context->render_surface, args[0], args[1], args[2], args[3], program_context->color);
+    #ifdef ENABLE_G1_GPU_RENDERING
+        return SDL_RenderFillRect(program_context->renderer, &(SDL_Rect) {args[0], args[1], args[2], args[3]});
+    #else
+        surf_draw_rect(program_context->render_surface, args[0], args[1], args[2], args[3], program_context->color);
+    #endif
     return 0;
 }
 
@@ -285,16 +308,29 @@ SDL_Window* create_window(uint32_t width, uint32_t height) {
     return win;
 }
 
-void quit_sdl(SDL_Window *win, SDL_Renderer *renderer, SDL_Surface *render_surface) {
+void quit_sdl(ProgramContext *program_context) {
+    SDL_Window *win = program_context->win;
+    SDL_Renderer *renderer = program_context->renderer;
+    SDL_Surface *render_surface = program_context->render_surface;
+    TTF_Font *font = program_context->font;
+
     if (win) {
         SDL_DestroyWindow(win);
     }
     if (renderer) {
         SDL_DestroyRenderer(renderer);
     }
-    if (render_surface) {
-        SDL_FreeSurface(render_surface);
+
+    #ifndef ENABLE_G1_GPU_RENDERING
+        if (render_surface) {
+            SDL_FreeSurface(render_surface);
+        }
+    #endif
+
+    if (font) {
+        TTF_CloseFont(font);
     }
+
     SDL_Quit();
 }
 
@@ -372,37 +408,81 @@ int init_program_state(const char *file_path, ProgramState *program_state) {
 }
 
 
-int init_sdl(SDL_Window **win, SDL_Renderer **renderer, SDL_Surface **render_surface, uint32_t window_width, uint32_t window_height, uint32_t pixel_size) {
-    *win = create_window(window_width, window_height);
-    if (!win) {
+int init_sdl(ProgramContext *program_context, uint32_t window_width, uint32_t window_height, struct FlagData *flags) {
+    program_context->win = create_window(window_width, window_height);
+    if (!program_context->win) {
         print_sdl_error("Failed to create SDL window");
         return -1;
     }
 
     // Create SDL renderer
-    *renderer = SDL_CreateRenderer(*win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (!renderer) {
-        print_sdl_error("Failed to create SDL renderer");
-        quit_sdl(*win, NULL, NULL);
+    program_context->renderer = SDL_CreateRenderer(program_context->win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (!program_context->renderer) {
+        print_sdl_error("Failed to create SDL renderer"); 
+        quit_sdl(program_context);
         return -2;
     }
 
     // Scale renderer
-    int set_scale_response = SDL_RenderSetScale(*renderer, pixel_size, pixel_size);
+    int set_scale_response = SDL_RenderSetScale(program_context->renderer, flags->pixel_size, flags->pixel_size);
     if (set_scale_response < 0) {
         print_sdl_error("Failed to set renderer scale");
-        quit_sdl(*win, *renderer, NULL);
+        quit_sdl(program_context);
         return -3;
     }
 
-    *render_surface = SDL_CreateRGBSurface(0, window_width, window_height, 32, 0, 0, 0, 0);
-    if (!render_surface) {
-        print_sdl_error("Failed to create render texture");
-        quit_sdl(*win, *renderer, *render_surface);
-        return -3;
+    // Create render surface
+    #ifdef ENABLE_G1_GPU_RENDERING
+        program_context->render_surface = SDL_GetWindowSurface(program_context->win);
+    #else
+        program_context->render_surface = SDL_CreateRGBSurface(0, window_width, window_height, 32, 0, 0, 0, 0);
+        if (!program_context->render_surface) {
+            print_sdl_error("Failed to create render texture");
+            quit_sdl(program_context);
+            return -3;
+        }
+    #endif
+    
+    // Load font for displaying framerate
+    if (flags->show_fps) {
+        SDL_RWops *rw = SDL_RWFromMem(______assets_RobotoMono_Regular_ttf, ______assets_RobotoMono_Regular_ttf_len);
+        if (!rw) {
+            print_sdl_error("Failed to create RWops from memory");
+            quit_sdl(program_context);
+            return -4;
+        }
+
+        TTF_Init();
+        program_context->font = TTF_OpenFontRW(rw, 1, FPS_FONT_SIZE);
+        if (!program_context->font) {
+            print_sdl_error("Failed to load font");
+            quit_sdl(program_context);
+            return -5;
+        }
     }
 
     return 0;
+}
+
+
+// Displays the fps label in the top left corner of the window.
+void display_fps_label(ProgramContext *program_context, int32_t delta_ms, uint32_t pixel_size) {
+    // Create the string
+    const size_t FPS_STRING_SIZE = 128;
+    char fps_string[FPS_STRING_SIZE];
+    snprintf(fps_string, FPS_STRING_SIZE, "%.1f", 1000.0 / delta_ms);
+
+    // Create the label texture
+    SDL_Surface *fps_surface = TTF_RenderText_Solid(program_context->font, fps_string, (SDL_Color) {220, 220, 220});
+    SDL_Texture *fps_texture = SDL_CreateTextureFromSurface(program_context->renderer, fps_surface);
+
+    // Display and free the label
+    SDL_Rect fps_dest_rect = {0, 0, fps_surface->w, fps_surface->h};
+    SDL_RenderSetScale(program_context->renderer, 1, 1);
+    SDL_RenderCopy(program_context->renderer, fps_texture, NULL, &fps_dest_rect);
+    SDL_RenderSetScale(program_context->renderer, pixel_size, pixel_size);
+    SDL_FreeSurface(fps_surface);
+    SDL_DestroyTexture(fps_texture);
 }
 
 
@@ -440,10 +520,22 @@ int program_tick_loop(ProgramState *program_state, const Uint8 *keyboard, struct
             return -1;
         }
 
-        present_texture = SDL_CreateTextureFromSurface(program_context->renderer, program_context->render_surface);
-        SDL_RenderCopy(program_context->renderer, present_texture, NULL, &dest_rect);
-        SDL_DestroyTexture(present_texture);
-        SDL_RenderPresent(program_context->renderer);
+        #ifdef ENABLE_G1_GPU_RENDERING
+            if (flag_data->show_fps) {
+                display_fps_label(program_context, delta_ms, flag_data->pixel_size);
+            }
+            SDL_RenderPresent(program_context->renderer);
+            SDL_RenderClear(program_context->renderer);
+        #else
+            present_texture = SDL_CreateTextureFromSurface(program_context->renderer, program_context->render_surface);
+            SDL_RenderCopy(program_context->renderer, present_texture, NULL, &dest_rect);
+            SDL_DestroyTexture(present_texture);
+            if (flag_data->show_fps) {
+                display_fps_label(program_context, delta_ms, flag_data->pixel_size);
+            }
+            SDL_RenderPresent(program_context->renderer);
+        #endif
+        
 
         uint64_t frame_time = SDL_GetTicks64() - start_frame_time;
         if (frame_time < target_frame_time) {
@@ -457,7 +549,7 @@ int program_tick_loop(ProgramState *program_state, const Uint8 *keyboard, struct
 
 int run_file(const char *file_path, const char* flags) {
     // Parse flags
-    struct FlagData flag_data;
+    struct FlagData flag_data = {0};
     parse_flags(&flag_data, flags);
 
     // Create program state
@@ -470,18 +562,13 @@ int run_file(const char *file_path, const char* flags) {
     }
 
     // Initialize SDL
-    SDL_Window *win;
-    SDL_Renderer *renderer;
-    SDL_Surface *render_surface;
     uint32_t window_width = program_data.width*flag_data.pixel_size;
     uint32_t window_height = program_data.height*flag_data.pixel_size;
-    int sdl_response = init_sdl(&win, &renderer, &render_surface, window_width, window_height, flag_data.pixel_size);
+    int sdl_response = init_sdl(&program_context, window_width, window_height, &flag_data);
     if (sdl_response < 0) {
         free_program_state(&program_state);
         return -2;
     }
-    program_context.renderer = renderer;
-    program_context.render_surface = render_surface;
     program_context.color = 0;
 
     const Uint8 *keyboard = SDL_GetKeyboardState(NULL);
@@ -491,25 +578,25 @@ int run_file(const char *file_path, const char* flags) {
         update_reserved_memory(&program_state, keyboard, 0);
         int run_thread_response = run_program_thread(&program_state, program_data.start_index, &flag_data);
         if (run_thread_response < 0) {
-            quit_sdl(win, renderer, render_surface);
+            quit_sdl(&program_context);
             free_program_state(&program_state);
             return -3;
         }
     }
     if (program_data.tick_index == -1) {
-        quit_sdl(win, renderer, render_surface);
+        quit_sdl(&program_context);
         free_program_state(&program_state);
         return 1;
     }
 
     int tick_loop_response = program_tick_loop(&program_state, keyboard, &flag_data);
     if (tick_loop_response < 0) {
-        quit_sdl(win, renderer, render_surface);
+        quit_sdl(&program_context);
         free_program_state(&program_state);
         return -4;
     }
 
-    quit_sdl(win, renderer, render_surface);
+    quit_sdl(&program_context);
     free_program_state(&program_state);
     return 0;
 }

@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include "instruction.h"
 
 typedef struct {
@@ -18,8 +19,10 @@ typedef struct {
     size_t memory_size;  // Also store memory size here so we can do bounds checks
 
     Uint32 color;
+    SDL_Window *win;
     SDL_Renderer *renderer;
     SDL_Surface *render_surface;
+    TTF_Font *font;
 
 } ProgramContext;
 

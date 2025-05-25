@@ -1,8 +1,10 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 project(MyProject)
 
 # Find the SDL2 package
-find_package(SDL2 REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SDL2 REQUIRED sdl2)
+pkg_check_modules(SDL2_TTF REQUIRED SDL2_ttf)
 
 # Include directories for headers
 include_directories(
@@ -13,6 +15,7 @@ include_directories(
     src/program
     src/util
     src/render
+    src/font
 )
 
 # Specify sources
@@ -32,6 +35,12 @@ if(ENABLE_G1_RUNTIME_ERRORS)
     add_definitions(-DENABLE_G1_RUNTIME_ERRORS)
 endif()
 
+# Option to enable GPU rendering
+option(ENABLE_G1_GPU_RENDERING "Enable GPU rendering" OFF)
+if(ENABLE_G1_GPU_RENDERING)
+    add_definitions(-DENABLE_G1_GPU_RENDERING)
+endif()
+
 # Set the build type for optimization (-O2 equivalent)
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -41,7 +50,7 @@ endif()
 add_executable(main ${SOURCES})
 
 # Link against SDL2
-target_link_libraries(main ${SDL2_LIBRARIES})
+target_link_libraries(main ${SDL2_LIBRARIES} ${SDL2_TTF_LIBRARIES})
 
 # Set optimization flags
 set_target_properties(main PROPERTIES COMPILE_FLAGS "-O2")
