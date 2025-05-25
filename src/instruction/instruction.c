@@ -1,3 +1,7 @@
+/*
+    Functions for parsing JSON and g1b files into a list of instructions.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>

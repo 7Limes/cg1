@@ -1,3 +1,7 @@
+/*
+    Functions for parsing JSON and g1b files into a list of instructions.
+*/
+
 #ifndef INSTRUCTION_HEADER
 #define INSTRUCTION_HEADER
 

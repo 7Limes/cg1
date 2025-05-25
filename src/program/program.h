@@ -1,3 +1,8 @@
+/*
+    Contains ProgramData, ProgramContext, and ProgramState definitions,
+    as well as functions for initializing the program state from a JSON or g1b file.
+*/
+
 #ifndef PROGRAM_HEADER
 #define PROGRAM_HEADER
 

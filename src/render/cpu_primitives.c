@@ -1,3 +1,7 @@
+/*
+    Functions for drawing primitives on SDL2 Surfaces.
+*/
+
 #include <SDL2/SDL.h>
 
 

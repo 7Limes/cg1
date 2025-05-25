@@ -1,3 +1,8 @@
+/*
+    Contains ProgramData, ProgramContext, and ProgramState definitions,
+    as well as functions for initializing the program state from a JSON or g1b file.
+*/
+
 #include <stdlib.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>

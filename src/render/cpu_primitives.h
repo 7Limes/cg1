@@ -1,5 +1,5 @@
 /*
-Functions for drawing primitives on SDL2 Surfaces.
+    Functions for drawing primitives on SDL2 Surfaces.
 */
 
 #ifndef RENDER_CPU_PRIMITIVES_HEADER

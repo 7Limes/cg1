@@ -1,8 +1,8 @@
 /*
-A g1 virtual machine implementation made with SDL2.
+    A g1 virtual machine implementation made with SDL2.
 
-By Miles Burkart
-https://github.com/7Limes
+    By Miles Burkart
+    https://github.com/7Limes
 */
 
 #include <stdio.h>
