@@ -1,3 +1,7 @@
+/*
+    Utility functions and structures.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

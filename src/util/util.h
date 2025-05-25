@@ -1,3 +1,7 @@
+/*
+    Utility functions and structures.
+*/
+
 #ifndef UTIL_HEADER
 #define UTIL_HEADER
 
@@ -54,7 +58,7 @@ typedef struct {
     size_t length, index;
 } BytesIterator;
 
-// Create a new BytesIterator
+// Create a new `BytesIterator`
 void bi_new(BytesIterator *iter, char *bytes, size_t length);
 
 /*
