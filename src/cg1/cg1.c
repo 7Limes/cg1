@@ -18,6 +18,7 @@
 #include "util.h"
 #include "font_data.h"
 
+
 #define FLAG_BUFFER_SIZE 128
 
 
@@ -29,10 +30,9 @@ const uint16_t FPS_LABEL_DISPLAY_INTERVAL = 10;
 
 
 struct FlagData {
-    bool show_fps, disable_log;
+    bool show_fps;
     uint32_t pixel_size;
 };
-
 
 
 int run_program_thread(const ProgramState *program_state, size_t index, struct FlagData *flag_data) {
@@ -43,12 +43,6 @@ int run_program_thread(const ProgramState *program_state, size_t index, struct F
     size_t instruction_count = program_data->instruction_count;
     while (program_context->program_counter < instruction_count) {
         Instruction instruction = program_data->instructions[program_context->program_counter];
-
-        // Skip log instructions if they're disabled
-        if (instruction.opcode == OP_LOG && flag_data->disable_log) {
-            program_context->program_counter++;
-            continue;
-        }
         
         int instruction_response = run_instruction(program_context, &instruction);
         if (instruction_response != 0) {
@@ -139,7 +133,6 @@ void quit_sdl(ProgramContext *program_context) {
 
 void parse_flags(struct FlagData* flag_data, const char* flags) {
     flag_data->show_fps = false;
-    flag_data->disable_log = false;
     flag_data->pixel_size = 1;
 
     if (flags[0] == '\0') {  // No flags provided
@@ -171,9 +164,6 @@ void parse_flags(struct FlagData* flag_data, const char* flags) {
                 continue;
             }
             flag_data->pixel_size = possible_pixel_size;
-        }
-        else if (strcmp(flag_buffer, "--disable_log") == 0 || strcmp(flag_buffer, "-dl") == 0) {
-            flag_data->disable_log = true;
         }
         else {
             printf("Unrecognized flag \"%s\".\n", flag_buffer);

@@ -41,6 +41,13 @@ if(ENABLE_G1_GPU_RENDERING)
     add_definitions(-DENABLE_G1_GPU_RENDERING)
 endif()
 
+# Option to enable log instruction
+option(ENABLE_G1_LOG_INSTRUCTION "Enable log instruction" ON)
+if(ENABLE_G1_LOG_INSTRUCTION)
+    add_definitions(-DENABLE_G1_LOG_INSTRUCTION)
+endif()
+
+
 # Set the build type for optimization (-O2 equivalent)
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)

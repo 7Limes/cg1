@@ -13,6 +13,7 @@ bool file_exists(char* path) {
     return stat(path, &buffer) == 0;
 }
 
+
 bool safecat(char* dest, char* src, int size) {
     if (strlen(dest) + strlen(src) >= size)
         return false;
@@ -20,10 +21,11 @@ bool safecat(char* dest, char* src, int size) {
     return true;
 }
 
+
 int main(int argc, char* argv[]) {
     char flags[FLAG_BUFFER_SIZE];
     if (argc == 1) {
-        printf("usage: cg1 [--show_fps] [--scale SCALE] [--disable_log] program_path\n");
+        printf("usage: cg1 [--show_fps] [--scale SCALE] program_path\n");
         return 1;
     }
     else if (argc > 2) {
