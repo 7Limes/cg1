@@ -14,22 +14,18 @@
 #include "cJSON.h"
 #include "program.h"
 #include "instruction.h"
+#include "instruction_impl.h"
 #include "util.h"
 #include "font_data.h"
 
-#ifndef ENABLE_G1_GPU_RENDERING
-    #include "cpu_primitives.h"
-#endif
-
 #define FLAG_BUFFER_SIZE 128
-
-#define INSTRUCTION_ARGUMENT_BUFFER_SIZE 5
 
 
 typedef int (*InstructionFunction)(ProgramContext *, int32_t *);
 
 
-const int FPS_FONT_SIZE = 20; 
+const int FPS_FONT_SIZE = 20;
+const uint16_t FPS_LABEL_DISPLAY_INTERVAL = 10;
 
 
 struct FlagData {
@@ -37,191 +33,6 @@ struct FlagData {
     uint32_t pixel_size;
 };
 
-
-void error(char *message) {
-    printf("\x1b[31mRUNTIME ERROR: %s\n", message);
-}
-
-void out_of_bounds_error(int32_t address) {
-    char err_buff[256];
-    snprintf(err_buff, 256, "Tried to access out of bounds memory at address %d\n", address);
-    error(err_buff);
-}
-
-void zero_division_error() {
-    error("Division by zero.");
-}
-
-
-// Replaces `arguments` with either values in program memory or raw numbers then stores them in `parsed_arguments`.
-int parse_arguments(int32_t *parsed_arguments, ProgramContext *program_context, Argument *arguments, byte argument_count) {
-    for (size_t i = 0; i < argument_count; i++) {
-        Argument arg = arguments[i];
-        if (arg.type == 1) {  // Address
-            #ifdef ENABLE_G1_RUNTIME_ERRORS
-                if (arg.value < 0 || arg.value >= program_context->memory_size) {
-                    out_of_bounds_error(arg.value);
-                    return -1;
-                }
-            #endif
-            parsed_arguments[i] = program_context->memory[arg.value];
-        }
-        else {  // Integer literal
-            parsed_arguments[i] = arg.value;
-        }
-    }
-    return 0;
-}
-
-
-int set_memory_value(int32_t dest, int32_t value, ProgramContext *program_context) {
-    #ifdef ENABLE_G1_RUNTIME_ERRORS
-        if (dest < 0 || dest >= program_context->memory_size) {
-            out_of_bounds_error(dest);
-            return -1;
-        }
-    #endif
-
-    program_context->memory[dest] = value;
-    return 0;
-}
-
-
-int ins_mov(ProgramContext *program_context, int32_t *args) {
-    return set_memory_value(args[0], args[1], program_context);
-}
-
-int ins_movp(ProgramContext *program_context, int32_t *args) {
-    #ifdef ENABLE_G1_RUNTIME_ERRORS
-        if (args[1] < 0 || args[1] >= program_context->memory_size) {
-            out_of_bounds_error(args[1]);
-            return -2;
-        }
-    #endif
-
-    return set_memory_value(args[0], program_context->memory[args[1]], program_context);
-}
-
-int ins_add(ProgramContext *program_context, int32_t *args) {
-    return set_memory_value(args[0], args[1] + args[2], program_context);
-}
-
-int ins_sub(ProgramContext *program_context, int32_t *args) {
-    return set_memory_value(args[0], args[1] - args[2], program_context);
-}
-
-int ins_mul(ProgramContext *program_context, int32_t *args) {
-    return set_memory_value(args[0], args[1] * args[2], program_context);
-}
-
-int ins_div(ProgramContext *program_context, int32_t *args) {
-    #ifdef ENABLE_G1_RUNTIME_ERRORS
-        if (args[2] == 0) {
-            zero_division_error();
-            return -2;
-        }
-    #endif
-
-    return set_memory_value(args[0], args[1] / args[2], program_context);
-}
-
-int ins_mod(ProgramContext *program_context, int32_t *args) {
-    #ifdef ENABLE_G1_RUNTIME_ERRORS
-        if (args[2] == 0) {
-            zero_division_error();
-            return -1;
-        }
-    #endif
-
-    int32_t mod = args[1] % args[2];
-    if (mod != 0 && (mod < 0) ^ (args[2] < 0)) {
-        mod += args[2];
-    }
-    return set_memory_value(args[0], mod, program_context);
-}
-
-int ins_less(ProgramContext *program_context, int32_t *args) {
-    return set_memory_value(args[0], args[1] < args[2], program_context);
-
-}
-
-int ins_equal(ProgramContext *program_context, int32_t *args) {
-    return set_memory_value(args[0], args[1] == args[2], program_context);
-}
-
-int ins_not(ProgramContext *program_context, int32_t *args) {
-    return set_memory_value(args[0], !args[1], program_context);
-}
-
-int ins_jmp(ProgramContext *program_context, int32_t *args) {
-    if (args[1]) {
-        program_context->program_counter = args[0]-1;
-    }
-    return 0;
-}
-
-int ins_color(ProgramContext *program_context, int32_t *args) {
-    #ifdef ENABLE_G1_GPU_RENDERING
-        SDL_SetRenderDrawColor(program_context->renderer, args[0], args[1], args[2], 255);
-    #else
-        program_context->color = SDL_MapRGBA(program_context->render_surface->format, args[0], args[1], args[2], 255);
-    #endif
-    return 0;
-}
-
-int ins_point(ProgramContext *program_context, int32_t *args) {
-    #ifdef ENABLE_G1_GPU_RENDERING
-        return SDL_RenderDrawPoint(program_context->renderer, args[0], args[1]);
-    #else
-        surf_draw_point(program_context->render_surface, args[0], args[1], program_context->color);
-    #endif
-    return 0;
-}
-
-int ins_line(ProgramContext *program_context, int32_t *args) {
-    #ifdef ENABLE_G1_GPU_RENDERING
-        return SDL_RenderDrawLine(program_context->renderer, args[0], args[1], args[2], args[3]);
-    #else
-        surf_draw_line(program_context->render_surface, args[0], args[1], args[2], args[3], program_context->color);
-    #endif
-    return 0;
-}
-
-int ins_rect(ProgramContext *program_context, int32_t *args) {
-    #ifdef ENABLE_G1_GPU_RENDERING
-        return SDL_RenderFillRect(program_context->renderer, &(SDL_Rect) {args[0], args[1], args[2], args[3]});
-    #else
-        surf_draw_rect(program_context->render_surface, args[0], args[1], args[2], args[3], program_context->color);
-    #endif
-    return 0;
-}
-
-int ins_log(ProgramContext *program_context, int32_t *args) {
-    printf("%d\n", args[0]);
-    return 0;
-}
-
-int ins_getp(ProgramContext *program_context, int32_t *args) {
-    SDL_Surface *surf = program_context->render_surface;
-    uint32_t *pixels = (uint32_t*) surf->pixels;
-    uint32_t raw_pixel = pixels[args[1] + (args[2] * surf->w)];
-    uint8_t r, g, b;
-    SDL_GetRGB(raw_pixel, surf->format, &r, &g, &b);
-    int32_t pixel_int = (int32_t) ((b << 16) | (g << 8) | r);
-    set_memory_value(args[0], pixel_int, program_context);
-}
-
-InstructionFunction INSTRUCTION_FUNCTIONS[AMOUNT_INSTRUCTIONS] = {
-    ins_mov, ins_movp,
-    ins_add, ins_sub, ins_mul, ins_div, ins_mod,
-    ins_less, ins_equal, ins_not,
-    ins_jmp,
-    ins_color, ins_point, ins_line, ins_rect,
-    ins_log,
-    ins_getp
-};
-
-#define LOG_OPCODE 15
 
 
 int run_program_thread(const ProgramState *program_state, size_t index, struct FlagData *flag_data) {
@@ -234,20 +45,12 @@ int run_program_thread(const ProgramState *program_state, size_t index, struct F
         Instruction instruction = program_data->instructions[program_context->program_counter];
 
         // Skip log instructions if they're disabled
-        if (instruction.opcode == LOG_OPCODE && flag_data->disable_log) {
+        if (instruction.opcode == OP_LOG && flag_data->disable_log) {
             program_context->program_counter++;
             continue;
         }
-
-        // Parse instruction arguments
-        uint32_t parsed_arguments[INSTRUCTION_ARGUMENT_BUFFER_SIZE];
-        int parse_args_response = parse_arguments(parsed_arguments, program_context, instruction.arguments, ARGUMENT_COUNTS[instruction.opcode]);
-        if (parse_args_response < 0) {
-            return -1;
-        }
         
-        // Call the instruction function 
-        int instruction_response = INSTRUCTION_FUNCTIONS[instruction.opcode](program_context, parsed_arguments);
+        int instruction_response = run_instruction(program_context, &instruction);
         if (instruction_response != 0) {
             return -2;
         }
@@ -291,7 +94,6 @@ void free_program_state(const ProgramState *program_state) {
 void print_sdl_error(const char *message) {
     printf("%s: \"%s\"\n", message, SDL_GetError());
 }
-
 
 SDL_Window* create_window(uint32_t width, uint32_t height) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -466,11 +268,11 @@ int init_sdl(ProgramContext *program_context, uint32_t window_width, uint32_t wi
 
 
 // Displays the fps label in the top left corner of the window.
-void display_fps_label(ProgramContext *program_context, int32_t delta_ms, uint32_t pixel_size) {
+void display_fps_label(ProgramContext *program_context, float fps, uint32_t pixel_size) {
     // Create the string
     const size_t FPS_STRING_SIZE = 128;
     char fps_string[FPS_STRING_SIZE];
-    snprintf(fps_string, FPS_STRING_SIZE, "%.1f", 1000.0 / delta_ms);
+    snprintf(fps_string, FPS_STRING_SIZE, "%.1f", fps);
 
     // Create the label texture
     SDL_Surface *fps_surface = TTF_RenderText_Solid(program_context->font, fps_string, (SDL_Color) {220, 220, 220});
@@ -497,6 +299,10 @@ int program_tick_loop(ProgramState *program_state, const Uint8 *keyboard, struct
     SDL_Texture *present_texture;
 
     SDL_Rect dest_rect = {0, 0, flag_data->pixel_size * program_data->width, flag_data->pixel_size * program_data->height};
+
+    uint32_t fps_label_timer = 0;
+    uint32_t fps_label_accumulated_time = 0;
+    float fps = 0.0;
     
     bool running = true; 
     while (running) {
@@ -522,7 +328,14 @@ int program_tick_loop(ProgramState *program_state, const Uint8 *keyboard, struct
 
         #ifdef ENABLE_G1_GPU_RENDERING
             if (flag_data->show_fps) {
-                display_fps_label(program_context, delta_ms, flag_data->pixel_size);
+                fps_label_timer += 1;
+                fps_label_accumulated_time += delta_ms;
+                if (fps_label_timer >= FPS_LABEL_DISPLAY_INTERVAL) {
+                    fps = 1000.0 / ((double) fps_label_accumulated_time / FPS_LABEL_DISPLAY_INTERVAL);
+                    fps_label_timer = 0;
+                    fps_label_accumulated_time = 0;
+                }
+                display_fps_label(program_context, fps, flag_data->pixel_size);
             }
             SDL_RenderPresent(program_context->renderer);
             SDL_RenderClear(program_context->renderer);
@@ -531,7 +344,14 @@ int program_tick_loop(ProgramState *program_state, const Uint8 *keyboard, struct
             SDL_RenderCopy(program_context->renderer, present_texture, NULL, &dest_rect);
             SDL_DestroyTexture(present_texture);
             if (flag_data->show_fps) {
-                display_fps_label(program_context, delta_ms, flag_data->pixel_size);
+                fps_label_timer += 1;
+                fps_label_accumulated_time += delta_ms;
+                if (fps_label_timer >= FPS_LABEL_DISPLAY_INTERVAL) {
+                    fps = 1000.0 / ((double) fps_label_accumulated_time / FPS_LABEL_DISPLAY_INTERVAL);
+                    fps_label_timer = 0;
+                    fps_label_accumulated_time = 0;
+                }
+                display_fps_label(program_context, fps, flag_data->pixel_size);
             }
             SDL_RenderPresent(program_context->renderer);
         #endif
