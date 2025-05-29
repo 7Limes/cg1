@@ -1,25 +1,9 @@
 #include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include <sys/stat.h>
+#include "util.h"
 #include "cg1.h"
 
 
 #define FLAG_BUFFER_SIZE 128
-
-
-bool file_exists(char* path) {
-    struct stat buffer;
-    return stat(path, &buffer) == 0;
-}
-
-
-bool safecat(char* dest, char* src, int size) {
-    if (strlen(dest) + strlen(src) >= size)
-        return false;
-    strncat(dest, src, size-1);  // size-1 to avoid compiler warning on O2
-    return true;
-}
 
 
 int main(int argc, char* argv[]) {

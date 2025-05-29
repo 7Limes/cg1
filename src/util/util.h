@@ -6,10 +6,32 @@
 #define UTIL_HEADER
 
 #include <inttypes.h>
+#include <stdbool.h>
 #include "cJSON.h"
 
 
 typedef unsigned char byte;
+
+
+// Iterator over a string split at each occurrence of a character
+typedef struct {
+    const char *source;
+    size_t source_length;
+    char delimiter;
+    size_t index;
+} SplitString;
+
+
+// Iterator over a group of bytes
+typedef struct {
+    const byte *bytes;
+    size_t length, index;
+} BytesIterator;
+
+
+// Returns true if a file exists at the specified path.
+bool file_exists(char* path);
+
 
 /*
 Reads data from `file_path` into `output_buffer` and stores the length in `length`.
@@ -30,13 +52,9 @@ int read_file_bytes(byte **output_buffer, size_t *length, const char *file_path)
 cJSON* json_from_file(const char *file_path);
 
 
-// Iterator over a string split at each occurrence of a character
-typedef struct {
-    const char *source;
-    size_t source_length;
-    char delimiter;
-    size_t index;
-} SplitString;
+// Concatenate `src` onto `dest` with a maximum of `size` bytes.
+bool safecat(char* dest, char* src, int size);
+
 
 // Create a new SplitString
 void ss_new(SplitString *ss, const char *s, char delimiter);
@@ -51,12 +69,6 @@ Return codes:
 */
 int ss_next(char *dest, SplitString *ss, size_t dest_size);
 
-
-// Iterator over a group of bytes.
-typedef struct {
-    const char *bytes;
-    size_t length, index;
-} BytesIterator;
 
 // Create a new `BytesIterator`
 void bi_new(BytesIterator *iter, char *bytes, size_t length);

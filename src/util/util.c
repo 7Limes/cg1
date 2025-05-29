@@ -6,9 +6,33 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <sys/stat.h>
 #include "cJSON.h"
 
 typedef unsigned char byte;
+
+
+// Iterator over a string split at each occurrence of a character
+typedef struct {
+    const char *source;
+    size_t source_length;
+    char delimiter;
+    size_t index;
+} SplitString;
+
+
+// Iterator over a group of bytes
+typedef struct {
+    const byte *bytes;
+    size_t length, index;
+} BytesIterator;
+
+
+bool file_exists(char* path) {
+    struct stat buffer;
+    return stat(path, &buffer) == 0;
+}
 
 
 // Based on https://stackoverflow.com/a/3464656
@@ -74,13 +98,12 @@ cJSON* json_from_file(const char *file_path) {
 }
 
 
-// Iterator over a string split at each occurrence of a character
-typedef struct {
-    const char *source;
-    size_t source_length;
-    char delimiter;
-    size_t index;
-} SplitString;
+bool safecat(char* dest, char* src, int size) {
+    if (strlen(dest) + strlen(src) >= size)
+        return false;
+    strncat(dest, src, size-1);  // size-1 to avoid compiler warning on O2
+    return true;
+}
 
 
 void ss_new(SplitString *ss, const char *string, char delimiter) {
@@ -135,13 +158,6 @@ void* memcpy_reverse(void *restrict dest, const void *restrict src, size_t n) {
 
     return dest;
 }
-
-
-// Iterator over a group of bytes.
-typedef struct {
-    byte *bytes;
-    size_t length, index;
-} BytesIterator;
 
 
 void bi_new(BytesIterator *iter, char *bytes, size_t length) {
