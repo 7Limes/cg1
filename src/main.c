@@ -1,9 +1,7 @@
 #include <stdio.h>
 #include "util.h"
+#include "flags.h"
 #include "cg1.h"
-
-
-#define FLAG_BUFFER_SIZE 128
 
 
 int main(int argc, char* argv[]) {
@@ -23,6 +21,7 @@ int main(int argc, char* argv[]) {
             }
         }
     }
+    
     if (!file_exists(argv[1])) {
         printf("File \"%s\" does not exist.", argv[1]);
         return 3;

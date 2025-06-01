@@ -17,9 +17,7 @@
 #include "instruction_impl.h"
 #include "util.h"
 #include "font_data.h"
-
-
-#define FLAG_BUFFER_SIZE 128
+#include "flags.h"
 
 
 typedef int (*InstructionFunction)(ProgramContext *, int32_t *);
@@ -27,12 +25,6 @@ typedef int (*InstructionFunction)(ProgramContext *, int32_t *);
 
 const int FPS_FONT_SIZE = 20;
 const uint16_t FPS_LABEL_DISPLAY_INTERVAL = 10;
-
-
-struct FlagData {
-    bool show_fps;
-    uint32_t pixel_size;
-};
 
 
 int run_program_thread(const ProgramState *program_state, size_t index, struct FlagData *flag_data) {
@@ -89,6 +81,7 @@ void print_sdl_error(const char *message) {
     printf("%s: \"%s\"\n", message, SDL_GetError());
 }
 
+
 SDL_Window* create_window(uint32_t width, uint32_t height) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         print_sdl_error("Failed to initialize SDL");
@@ -103,6 +96,7 @@ SDL_Window* create_window(uint32_t width, uint32_t height) {
 
     return win;
 }
+
 
 void quit_sdl(ProgramContext *program_context) {
     SDL_Window *win = program_context->win;
@@ -128,75 +122,6 @@ void quit_sdl(ProgramContext *program_context) {
     }
 
     SDL_Quit();
-}
-
-
-void parse_flags(struct FlagData* flag_data, const char* flags) {
-    flag_data->show_fps = false;
-    flag_data->pixel_size = 1;
-
-    if (flags[0] == '\0') {  // No flags provided
-        return;
-    }
-
-    SplitString ss;
-    ss_new(&ss, flags, ' ');
-
-    char flag_buffer[FLAG_BUFFER_SIZE];
-    while (true) {
-        int ss_next_response = ss_next(flag_buffer, &ss, FLAG_BUFFER_SIZE);
-        if (ss_next_response != 0) {
-            break;
-        }
-
-        if (strcmp(flag_buffer, "--show_fps") == 0 || strcmp(flag_buffer, "-fps") == 0) {
-            flag_data->show_fps = true;
-        }
-        else if (strcmp(flag_buffer, "--scale") == 0 || strcmp(flag_buffer, "-s") == 0) {
-            ss_next_response = ss_next(flag_buffer, &ss, FLAG_BUFFER_SIZE);  // `flag_buffer` should now contain pixel size as a string
-            if (ss_next_response != 0) {
-                printf("Expected a value for pixel size flag.\n");
-                continue;
-            }
-            uint32_t possible_pixel_size = atoi(flag_buffer);
-            if (possible_pixel_size == 0) {
-                printf("Expected numeric or nonzero value for pixel size flag.\n");
-                continue;
-            }
-            flag_data->pixel_size = possible_pixel_size;
-        }
-        else {
-            printf("Unrecognized flag \"%s\".\n", flag_buffer);
-        }
-    }
-}
-
-
-int init_program_state(const char *file_path, ProgramState *program_state) {
-    int program_state_response;
-    const char *extension = strrchr(file_path, '.') + 1;
-    if (strcmp(extension, "g1b") == 0) {  // Binary format
-        byte *program_bytes;
-        size_t bytes_length;
-        int file_read_response = read_file_bytes(&program_bytes, &bytes_length, file_path);
-        if (file_read_response < 0) {
-            return -1;
-        }
-        program_state_response = init_program_state_binary(program_state, program_bytes, bytes_length);
-    }
-    else {  // Assume JSON format
-        cJSON *json = json_from_file(file_path);
-        if (!json) {
-            return -1;
-        }
-        program_state_response = init_program_state_json(program_state, json);
-        cJSON_Delete(json);
-    }
-
-    if (program_state_response < 0) {
-        return -2;
-    }
-    return 0;
 }
 
 
@@ -253,6 +178,34 @@ int init_sdl(ProgramContext *program_context, uint32_t window_width, uint32_t wi
         }
     }
 
+    return 0;
+}
+
+
+int init_program_state(const char *file_path, ProgramState *program_state) {
+    int program_state_response;
+    const char *extension = strrchr(file_path, '.') + 1;
+    if (strcmp(extension, "g1b") == 0) {  // Binary format
+        byte *program_bytes;
+        size_t bytes_length;
+        int file_read_response = read_file_bytes(&program_bytes, &bytes_length, file_path);
+        if (file_read_response < 0) {
+            return -1;
+        }
+        program_state_response = init_program_state_binary(program_state, program_bytes, bytes_length);
+    }
+    else {  // Assume JSON format
+        cJSON *json = json_from_file(file_path);
+        if (!json) {
+            return -1;
+        }
+        program_state_response = init_program_state_json(program_state, json);
+        cJSON_Delete(json);
+    }
+
+    if (program_state_response < 0) {
+        return -2;
+    }
     return 0;
 }
 
