@@ -168,7 +168,7 @@ static inline int _ins_getp(ProgramContext *program_context, int32_t *args) {
     uint8_t r, g, b;
     SDL_GetRGB(raw_pixel, surf->format, &r, &g, &b);
     int32_t pixel_int = (int32_t) ((b << 16) | (g << 8) | r);
-    _set_memory_value(args[0], pixel_int, program_context);
+    return _set_memory_value(args[0], pixel_int, program_context);
 }
 
 
