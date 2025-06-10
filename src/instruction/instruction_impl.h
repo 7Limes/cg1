@@ -162,6 +162,14 @@ static inline int _ins_log(ProgramContext *program_context, int32_t *args) {
 }
 
 static inline int _ins_getp(ProgramContext *program_context, int32_t *args) {
+    #ifdef ENABLE_G1_RUNTIME_ERRORS
+        if (args[1] < 0 || args[1] >= program_context->render_surface->w || args[2] < 0 || args[2] >= program_context->render_surface->h) {
+            char err_buff[256];
+            snprintf(err_buff, 256, "Tried to access out of bounds pixel at (%d, %d)\n", args[1], args[2]);
+            _error(err_buff);
+            return -1;
+        }
+    #endif
     SDL_Surface *surf = program_context->render_surface;
     uint32_t *pixels = (uint32_t*) surf->pixels;
     uint32_t raw_pixel = pixels[args[1] + (args[2] * surf->w)];

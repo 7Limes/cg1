@@ -24,15 +24,15 @@ typedef struct {
 
 // Stores dynamic information about a program. (memory, program counter, etc.)
 typedef struct {
-    int32_t *memory;
     size_t program_counter;
     size_t memory_size;  // Also store memory size here so we can do bounds checks
+    int32_t *memory;
 
-    Uint32 color;
     SDL_Window *win;
     SDL_Renderer *renderer;
     SDL_Surface *render_surface;
     TTF_Font *font;
+    Uint32 color;
 
 } ProgramContext;
 

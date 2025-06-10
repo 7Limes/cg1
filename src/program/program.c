@@ -19,15 +19,15 @@ typedef struct {
 
 
 typedef struct {
-    int32_t *memory;
     size_t program_counter;
     size_t memory_size;  // Also store memory size here so we can do bounds checks
-
-    Uint32 color;
+    int32_t *memory;
+    
     SDL_Window *win;
     SDL_Renderer *renderer;
     SDL_Surface *render_surface;
     TTF_Font *font;
+    Uint32 color;
 
 } ProgramContext;
 
