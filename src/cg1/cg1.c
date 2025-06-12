@@ -20,9 +20,6 @@
 #include "flags.h"
 
 
-typedef int (*InstructionFunction)(ProgramContext *, int32_t *);
-
-
 const int FPS_FONT_SIZE = 20;
 const uint16_t FPS_LABEL_DISPLAY_INTERVAL = 10;
 
