@@ -233,7 +233,7 @@ int program_tick_loop(ProgramState *program_state, const Uint8 *keyboard, struct
     ProgramContext *program_context = program_state->context;
 
     Uint32 target_frame_time = 1000 / program_data->tickrate;
-    Uint64 last_frame_time, start_frame_time;
+    Uint64 last_frame_time = 0, start_frame_time = 0;
     int32_t delta_ms = 0;
 
     SDL_Texture *present_texture;
