@@ -5,12 +5,13 @@
 
 
 int main(int argc, char* argv[]) {
-    char flags[FLAG_BUFFER_SIZE];
+    char flags[FLAG_BUFFER_SIZE] = "";
     if (argc == 1) {
         printf("usage: cg1 [--show_fps] [--scale SCALE] program_path\n");
         return 1;
     }
-    else if (argc > 2) {
+    
+    if (argc > 2) {
         for (int i = 2; i < argc; i++) {
             bool result = safecat(flags, argv[i], FLAG_BUFFER_SIZE);
             if (i != argc-1)
@@ -23,7 +24,7 @@ int main(int argc, char* argv[]) {
     }
     
     if (!file_exists(argv[1])) {
-        printf("File \"%s\" does not exist.", argv[1]);
+        printf("File \"%s\" does not exist.\n", argv[1]);
         return 3;
     }
 
