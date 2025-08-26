@@ -26,8 +26,7 @@ set(SOURCES
     src/instruction/instruction.c
     src/program/program.c
     src/util/util.c
-    src/util/flags.c
-    src/render/cpu_primitives.c
+    src/util/flags.c    
 )
 
 # Option to enable runtime errors
