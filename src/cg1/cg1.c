@@ -19,6 +19,18 @@
 #include "font_data.h"
 #include "flags.h"
 
+#ifdef G1_EMBEDDED
+    #include "embed.h"
+#endif
+
+#ifndef G1_FLAG_SHOW_FPS
+    #define G1_FLAG_SHOW_FPS 0
+#endif
+
+#ifndef G1_FLAG_SCALE
+    #define G1_FLAG_SCALE 1
+#endif
+
 
 const int FPS_FONT_SIZE = 20;
 const uint16_t FPS_LABEL_DISPLAY_INTERVAL = 10;
@@ -132,7 +144,7 @@ int init_sdl(ProgramContext *program_context, uint32_t window_width, uint32_t wi
     // Create SDL renderer
     program_context->renderer = SDL_CreateRenderer(program_context->win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (!program_context->renderer) {
-        print_sdl_error("Failed to create SDL renderer"); 
+        print_sdl_error("Failed to create SDL renderer");
         quit_sdl(program_context);
         return -2;
     }
@@ -307,6 +319,51 @@ int program_tick_loop(ProgramState *program_state, const Uint8 *keyboard, struct
 }
 
 
+int run_program(ProgramState *program_state, struct FlagData *flag_data) {
+    ProgramData *program_data = program_state->data;
+    ProgramContext *program_context = program_state->context;
+
+    // Initialize SDL
+    uint32_t window_width = program_data->width*flag_data->pixel_size;
+    uint32_t window_height = program_data->height*flag_data->pixel_size;
+    int sdl_response = init_sdl(program_context, window_width, window_height, flag_data);
+    if (sdl_response < 0) {
+        free_program_state(program_state);
+        return -2;
+    }
+    program_context->color = 0;
+
+    const Uint8 *keyboard = SDL_GetKeyboardState(NULL);
+    
+    // Jump to start label if it is there
+    if (program_data->start_index != -1) {
+        update_reserved_memory(program_state, keyboard, 0);
+        int run_thread_response = run_program_thread(program_state, program_data->start_index, flag_data);
+        if (run_thread_response < 0) {
+            quit_sdl(program_context);
+            free_program_state(program_state);
+            return -3;
+        }
+    }
+    if (program_data->tick_index == -1) {
+        quit_sdl(program_context);
+        free_program_state(program_state);
+        return 1;
+    }
+
+    int tick_loop_response = program_tick_loop(program_state, keyboard, flag_data);
+    if (tick_loop_response < 0) {
+        quit_sdl(program_context);
+        free_program_state(program_state);
+        return -4;
+    }
+
+    quit_sdl(program_context);
+    free_program_state(program_state);
+    return 0;
+}
+
+
 int run_file(const char *file_path, const char* flags) {
     // Parse flags
     struct FlagData flag_data = {0};
@@ -321,42 +378,23 @@ int run_file(const char *file_path, const char* flags) {
         return -1;
     }
 
-    // Initialize SDL
-    uint32_t window_width = program_data.width*flag_data.pixel_size;
-    uint32_t window_height = program_data.height*flag_data.pixel_size;
-    int sdl_response = init_sdl(&program_context, window_width, window_height, &flag_data);
-    if (sdl_response < 0) {
-        free_program_state(&program_state);
-        return -2;
-    }
-    program_context.color = 0;
+    run_program(&program_state, &flag_data);
+}
 
-    const Uint8 *keyboard = SDL_GetKeyboardState(NULL);
-    
-    // Jump to start label if it is there
-    if (program_data.start_index != -1) {
-        update_reserved_memory(&program_state, keyboard, 0);
-        int run_thread_response = run_program_thread(&program_state, program_data.start_index, &flag_data);
-        if (run_thread_response < 0) {
-            quit_sdl(&program_context);
-            free_program_state(&program_state);
-            return -3;
+
+int run_embedded() {
+    #ifdef G1_EMBEDDED
+        struct FlagData flag_data = {G1_FLAG_SHOW_FPS, G1_FLAG_SCALE};
+        ProgramData program_data = {0};
+        ProgramContext program_context = {0};
+        ProgramState program_state = {&program_data, &program_context};
+        int program_state_response = init_program_state_binary(&program_state, __embedded_program, __embedded_program_len);
+        if (program_state_response < 0) {
+            return -1;
         }
-    }
-    if (program_data.tick_index == -1) {
-        quit_sdl(&program_context);
-        free_program_state(&program_state);
-        return 1;
-    }
 
-    int tick_loop_response = program_tick_loop(&program_state, keyboard, &flag_data);
-    if (tick_loop_response < 0) {
-        quit_sdl(&program_context);
-        free_program_state(&program_state);
-        return -4;
-    }
+        return run_program(&program_state, &flag_data);
+    #endif
 
-    quit_sdl(&program_context);
-    free_program_state(&program_state);
     return 0;
 }

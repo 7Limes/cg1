@@ -48,6 +48,27 @@ if(ENABLE_G1_LOG_INSTRUCTION)
     add_definitions(-DENABLE_G1_LOG_INSTRUCTION)
 endif()
 
+# Option for embedded program
+option(G1_EMBEDDED "Compile with an embedded program" ON)
+if(G1_EMBEDDED)
+    add_definitions(-DG1_EMBEDDED)
+endif()
+
+# Flags for embedded programs
+option(G1_FLAG_SHOW_FPS "(EMBEDDED ONLY) Whether fps should be shown at runtime")
+if(G1_FLAG_SHOW_FPS)
+    add_definitions(-DG1_FLAG_SHOW_FPS=1)
+else()
+    add_definitions(-DG1_FLAG_SHOW_FPS=0)
+endif()
+
+set(G1_FLAG_SCALE 1 CACHE STRING "(EMBEDDED ONLY) The value by which to scale the final output")
+if(NOT G1_FLAG_SCALE MATCHES "^[0-9]+$")
+    message(FATAL_ERROR "G1_FLAG_SCALE must be a positive integer")
+else()
+    add_definitions(-DG1_FLAG_SCALE=${G1_FLAG_SCALE})
+endif()
+
 
 # Set the build type for optimization (-O2 equivalent)
 if(NOT CMAKE_BUILD_TYPE)

@@ -4,7 +4,7 @@
 #include "cg1.h"
 
 
-int main(int argc, char* argv[]) {
+int main_cli(int argc, char* argv[]) {
     char flags[FLAG_BUFFER_SIZE] = "";
     if (argc == 1) {
         printf("usage: cg1 [--show_fps] [--scale SCALE] program_path\n");
@@ -30,4 +30,13 @@ int main(int argc, char* argv[]) {
 
     run_file(argv[1], flags);
     return 0;
+}
+
+
+int main(int argc, char* argv[]) {
+    #ifdef G1_EMBEDDED
+        run_embedded();
+    #else
+        return main_cli(argc, argv);
+    #endif
 }
