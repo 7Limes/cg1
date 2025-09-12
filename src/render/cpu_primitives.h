@@ -24,7 +24,7 @@ static inline void surf_draw_point(SDL_Surface *surf, int x, int y, Uint32 color
 Return the rectangle created by the overlap between two other rectangles.
 Returns a zeroed struct if there is no intersection.
 */
-SDL_Rect __get_rect_intersection(SDL_Rect a, SDL_Rect b) {
+static inline SDL_Rect __get_rect_intersection(SDL_Rect a, SDL_Rect b) {
     // Find the leftmost right edge and the rightmost left edge
     int left = (a.x > b.x) ? a.x : b.x;
     int right = (a.x + a.w < b.x + b.w) ? (a.x + a.w) : (b.x + b.w);

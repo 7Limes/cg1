@@ -7,35 +7,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include "instruction.h"
-
-typedef struct {
-    size_t instruction_count;
-    Instruction *instructions;
-
-    int32_t start_index, tick_index;
-    int32_t memory_size, width, height, tickrate;
-
-} ProgramData;
-
-
-typedef struct {
-    size_t program_counter;
-    size_t memory_size;  // Also store memory size here so we can do bounds checks
-    int32_t *memory;
-    
-    SDL_Window *win;
-    SDL_Renderer *renderer;
-    SDL_Surface *render_surface;
-    TTF_Font *font;
-    Uint32 color;
-
-} ProgramContext;
-
-
-typedef struct {
-    ProgramData *data;
-    ProgramContext *context;
-} ProgramState;
+#include "program.h"
 
 
 // Allocates memory for the program and records it in `program_context`
