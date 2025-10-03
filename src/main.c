@@ -35,7 +35,7 @@ int main_cli(int argc, char* argv[]) {
 
 int main(int argc, char* argv[]) {
     #ifdef G1_EMBEDDED
-        run_embedded();
+        return run_embedded();
     #else
         return main_cli(argc, argv);
     #endif

@@ -26,6 +26,7 @@ void parse_flags(struct FlagData* flag_data, const char* flags) {
 
     SplitString ss;
     ss_new(&ss, flags, ' ');
+    
 
     char flag_buffer[FLAG_BUFFER_SIZE];
     while (true) {
