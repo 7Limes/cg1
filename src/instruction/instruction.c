@@ -11,7 +11,6 @@
 #include "instruction.h"
 
 
-#define AMOUNT_INSTRUCTIONS 17
 const char *INSTRUCTIONS[AMOUNT_INSTRUCTIONS] = {
     "mov",
     "movp",
@@ -29,10 +28,11 @@ const char *INSTRUCTIONS[AMOUNT_INSTRUCTIONS] = {
     "line",
     "rect",
     "log",
-    "getp"
+    "getp",
+    "setch"
 };
 
-const byte ARGUMENT_COUNTS[AMOUNT_INSTRUCTIONS] = {2, 2, 3, 3, 3, 3, 3, 3, 3, 2, 2, 3, 2, 4, 4, 1, 3};
+const byte ARGUMENT_COUNTS[AMOUNT_INSTRUCTIONS] = {2, 2, 3, 3, 3, 3, 3, 3, 3, 2, 2, 3, 2, 4, 4, 1, 3, 4};
 
 
 int32_t get_json_int(cJSON *json, const char *name) {

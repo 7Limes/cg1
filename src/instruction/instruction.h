@@ -7,7 +7,7 @@
 
 #include "util.h"
 
-#define AMOUNT_INSTRUCTIONS 17
+#define AMOUNT_INSTRUCTIONS 18
 
 #define OP_MOV 0
 #define OP_MOVP 1
@@ -26,6 +26,7 @@
 #define OP_RECT 14
 #define OP_LOG 15
 #define OP_GETP 16
+#define OP_SETCH 17
 
 extern const byte ARGUMENT_COUNTS[];
 

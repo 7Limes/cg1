@@ -16,6 +16,7 @@ include_directories(
     src/util
     src/render
     src/font
+    src/audio
 )
 
 # Specify sources
@@ -27,6 +28,7 @@ set(SOURCES
     src/program/program.c
     src/util/util.c
     src/util/flags.c    
+    src/audio/audio.c
 )
 
 # Option to enable runtime errors

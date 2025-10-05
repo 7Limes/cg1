@@ -18,6 +18,7 @@
 #include "util.h"
 #include "font_data.h"
 #include "flags.h"
+#include "audio.h"
 
 #ifdef G1_EMBEDDED
     #include "embed.h"
@@ -83,6 +84,9 @@ void free_program_state(const ProgramState *program_state) {
     ProgramContext *program_context = program_state->context;
     free(program_data->instructions);
     free(program_context->memory);
+    if (program_context->audio_device_id) {
+        free(program_context->audio_buffer);
+    }
 }
 
 
@@ -92,7 +96,7 @@ void print_sdl_error(const char *message) {
 
 
 SDL_Window* create_window(uint32_t width, uint32_t height) {
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
         print_sdl_error("Failed to initialize SDL");
         return NULL;
     }
@@ -112,6 +116,7 @@ void quit_sdl(ProgramContext *program_context) {
     SDL_Renderer *renderer = program_context->renderer;
     SDL_Surface *render_surface = program_context->render_surface;
     TTF_Font *font = program_context->font;
+    SDL_AudioDeviceID audio_device_id = program_context->audio_device_id;
 
     if (win) {
         SDL_DestroyWindow(win);
@@ -128,6 +133,10 @@ void quit_sdl(ProgramContext *program_context) {
 
     if (font) {
         TTF_CloseFont(font);
+    }
+
+    if (audio_device_id) {
+        SDL_CloseAudioDevice(audio_device_id);
     }
 
     SDL_Quit();
@@ -308,6 +317,8 @@ int program_tick_loop(ProgramState *program_state, const Uint8 *keyboard, struct
             SDL_RenderPresent(program_context->renderer);
         #endif
         
+        // Update audio
+        audio_tick(program_context);
 
         uint64_t frame_time = SDL_GetTicks64() - start_frame_time;
         if (frame_time < target_frame_time) {
@@ -335,6 +346,14 @@ int run_program(ProgramState *program_state, struct FlagData *flag_data) {
 
     const Uint8 *keyboard = SDL_GetKeyboardState(NULL);
     
+    // Initialize audio
+    int init_audio_response = init_audio(program_context, program_data->tickrate);
+    if (init_audio_response < 0) {
+        quit_sdl(program_context);
+        free_program_state(program_state);
+        return -4;
+    }
+    
     // Jump to start label if it is there
     if (program_data->start_index != -1) {
         update_reserved_memory(program_state, keyboard, 0);
@@ -351,11 +370,12 @@ int run_program(ProgramState *program_state, struct FlagData *flag_data) {
         return 1;
     }
 
+    // Start program tick loop
     int tick_loop_response = program_tick_loop(program_state, keyboard, flag_data);
     if (tick_loop_response < 0) {
         quit_sdl(program_context);
         free_program_state(program_state);
-        return -4;
+        return -5;
     }
 
     quit_sdl(program_context);

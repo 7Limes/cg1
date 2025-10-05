@@ -10,6 +10,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include "instruction.h"
+#include "audio_defs.h"
 
 
 // Stores static information about a program. (instructions, program metadata, etc.)
@@ -33,6 +34,11 @@ typedef struct {
     SDL_Surface *render_surface;
     TTF_Font *font;
     Uint32 color;
+
+    SDL_AudioDeviceID audio_device_id;
+    Channel audio_channels[AMOUNT_AUDIO_CHANNELS];
+    uint32_t audio_buffer_size;
+    int16_t *audio_buffer;
 
 } ProgramContext;
 

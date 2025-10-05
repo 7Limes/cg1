@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 #include "program.h"
+#include "audio_defs.h"
+
 
 #ifndef ENABLE_G1_GPU_RENDERING
     #include "cpu_primitives.h"
@@ -126,6 +128,7 @@ static inline int _ins_color(ProgramContext *program_context, int32_t *args) {
     #else
         program_context->color = SDL_MapRGBA(program_context->render_surface->format, args[0], args[1], args[2], 255);
     #endif
+
     return 0;
 }
 
@@ -135,6 +138,7 @@ static inline int _ins_point(ProgramContext *program_context, int32_t *args) {
     #else
         surf_draw_point(program_context->render_surface, args[0], args[1], program_context->color);
     #endif
+
     return 0;
 }
 
@@ -144,6 +148,7 @@ static inline int _ins_line(ProgramContext *program_context, int32_t *args) {
     #else
         surf_draw_line(program_context->render_surface, args[0], args[1], args[2], args[3], program_context->color);
     #endif
+
     return 0;
 }
 
@@ -153,6 +158,7 @@ static inline int _ins_rect(ProgramContext *program_context, int32_t *args) {
     #else
         surf_draw_rect(program_context->render_surface, args[0], args[1], args[2], args[3], program_context->color);
     #endif
+
     return 0;
 }
 
@@ -170,13 +176,39 @@ static inline int _ins_getp(ProgramContext *program_context, int32_t *args) {
             return -1;
         }
     #endif
+
     SDL_Surface *surf = program_context->render_surface;
     uint32_t *pixels = (uint32_t*) surf->pixels;
     uint32_t raw_pixel = pixels[args[1] + (args[2] * surf->w)];
     uint8_t r, g, b;
     SDL_GetRGB(raw_pixel, surf->format, &r, &g, &b);
     int32_t pixel_int = (int32_t) ((b << 16) | (g << 8) | r);
+
     return _set_memory_value(args[0], pixel_int, program_context);
+}
+
+
+static inline int _ins_setch(ProgramContext *program_context, int32_t *args) {
+    #ifdef ENABLE_G1_RUNTIME_ERRORS
+        char err_buff[256];
+        if (args[0] >= AMOUNT_AUDIO_CHANNELS) {
+            snprintf(err_buff, 256, "Tried to set channel %d, but only %d channels exist.\n", args[0], AMOUNT_AUDIO_CHANNELS);
+            _error(err_buff);
+            return -1;
+        }
+        if (args[1] >= AMOUNT_WAVEFORMS) {
+            snprintf(err_buff, 256, "Tried to set to waveform %d, but only %d waveforms exist.\n", args[1], AMOUNT_WAVEFORMS);
+            _error(err_buff);
+            return -2;
+        }
+    #endif
+
+    Channel *channel = &program_context->audio_channels[args[0]];
+    channel->waveform = (Waveform) args[1];
+    channel->frequency = args[2];
+    channel->volume = args[3];
+    
+    return 0;
 }
 
 
@@ -251,6 +283,8 @@ static inline int run_instruction(ProgramContext *program_context, const Instruc
             #endif
         case OP_GETP:
             return _ins_getp(program_context, args);
+        case OP_SETCH:
+            return _ins_setch(program_context, args);
     }
 }
 
