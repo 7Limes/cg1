@@ -29,6 +29,7 @@ int init_audio(ProgramContext *program_context, int32_t tickrate) {
             .waveform = SQUARE,
             .frequency = 0,
             .volume = 0,
+            .noise_sample = 0,
             .phase = 0.0
         };
     }
@@ -65,7 +66,7 @@ static inline int16_t generate_sawtooth(Channel *channel) {
 
 
 static inline int16_t generate_noise(Channel *channel) {
-    return rand() % channel->volume - (channel->volume / 2);
+    return channel->noise_sample;
 }
 
 
@@ -73,8 +74,8 @@ static inline int16_t generate_sample(Channel *channel) {
     int16_t sample;
     switch (channel->waveform) {
         case SQUARE:
-        sample = generate_square(channel);
-        break;
+            sample = generate_square(channel);
+            break;
         case TRIANGLE:
             sample = generate_triangle(channel);
             break;
@@ -90,6 +91,9 @@ static inline int16_t generate_sample(Channel *channel) {
     channel->phase += channel->frequency / (double) AUDIO_SAMPLE_RATE;
     if (channel->phase >= 1.0) {
         channel->phase -= 1;
+        if (channel->waveform == NOISE) {
+            channel->noise_sample = rand() % (channel->volume * 2) - channel->volume;
+        }
     }
     
     return sample;

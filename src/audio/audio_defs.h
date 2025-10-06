@@ -21,6 +21,7 @@ typedef struct {
     Waveform waveform;
     uint16_t frequency;
     uint16_t volume;
+    int16_t noise_sample;
     double phase;
 } Channel;
 
