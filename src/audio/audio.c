@@ -101,6 +101,10 @@ static inline int16_t generate_sample(Channel *channel) {
 
 
 void mix_channels(ProgramContext *program_context, uint32_t samples_to_generate) {
+    if (!samples_to_generate) {
+        return;
+    }
+
     // Clear audio buffer
     memset(program_context->audio_buffer, 0, samples_to_generate * sizeof(int16_t));
 
@@ -122,12 +126,11 @@ void mix_channels(ProgramContext *program_context, uint32_t samples_to_generate)
 int audio_tick(ProgramContext *program_context) {
     const uint32_t amount_queued_bytes = SDL_GetQueuedAudioSize(program_context->audio_device_id);
     const uint32_t samples_to_generate = program_context->audio_buffer_size - (amount_queued_bytes / sizeof(int16_t));
-    printf("queued samples: %ld, samples to gen: %d\n", amount_queued_bytes / sizeof(int16_t), samples_to_generate);
     mix_channels(program_context, samples_to_generate);
 
     return SDL_QueueAudio(
         program_context->audio_device_id,
-        program_context->audio_buffer, 
+        program_context->audio_buffer,
         samples_to_generate * sizeof(int16_t)
     );
 }
