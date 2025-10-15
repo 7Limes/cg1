@@ -4,7 +4,7 @@
 
 # Initial checks
 if [ $# -eq 0 ]; then
-    echo "Usage: embed.sh [input path] [output_path] (SHOW_FPS) (PIXEL_SCALE)"
+    echo "Usage: embed.sh [input path (.g1b)] [output_path] (SHOW_FPS) (PIXEL_SCALE)"
     exit 1
 fi
 
@@ -29,28 +29,16 @@ fi
 
 
 # Create embed.h
-xxd -i -n __embedded_program $1 > ../src/cg1/embed.h
+xxd -i -n __embedded_program $1 > src/cg1/embed.h
 
 # Reconfigure for embed compile
-cmake .. -DG1_EMBEDDED=1 -DG1_FLAG_SHOW_FPS=$show_fps_flag -DG1_FLAG_SCALE=$scale_flag
-
-# If `main` already exists, move it temporarily
-if [ -f "main" ]; then
-    mv main main.old
-    moved_main=1
-fi
+cmake -B embed_build -DG1_EMBEDDED=ON -DSTATIC_BUILD=ON -DG1_FLAG_SHOW_FPS=$show_fps_flag -DG1_FLAG_SCALE=$scale_flag
 
 # Compile and move executable
-make
-cp main $2
+cmake --build embed_build
+cp embed_build/main $2
 
-# Restore original `main` if necessary
-if [ $moved_main -eq 1 ]; then
-    mv main.old main
-fi
-
-# Reset back to original settings
-rm ../src/cg1/embed.h
-cmake .. -DG1_EMBEDDED=0 -DG1_FLAG_SHOW_FPS=0 -DG1_FLAG_SCALE=1
+# Remove embed file
+rm src/cg1/embed.h
 
 exit 0

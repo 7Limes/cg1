@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 project(MyProject)
 
+# Option to enable static linking
+option(STATIC_BUILD "Build with static linking" OFF)
+
 # Find the SDL2 package
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SDL2 REQUIRED sdl2)
@@ -79,8 +82,34 @@ endif()
 # Create an executable target
 add_executable(main ${SOURCES})
 
-# Link against SDL2
-target_link_libraries(main ${SDL2_LIBRARIES} ${SDL2_TTF_LIBRARIES})
+# Configure linking based on STATIC_BUILD option
+if(STATIC_BUILD)
+    # Get static linking flags using pkg-config
+    execute_process(
+        COMMAND pkg-config --libs --static sdl2
+        OUTPUT_VARIABLE SDL2_STATIC_LDFLAGS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    execute_process(
+        COMMAND pkg-config --libs --static SDL2_ttf
+        OUTPUT_VARIABLE SDL2_TTF_STATIC_LDFLAGS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    
+    # Link with static flags
+    target_link_libraries(main ${SDL2_STATIC_LDFLAGS} ${SDL2_TTF_STATIC_LDFLAGS})
+    
+    # Static linking flags for gcc/g++
+    target_link_options(main PRIVATE -static-libgcc -static-libstdc++)
+    
+    message(STATUS "Building with static linking")
+    message(STATUS "SDL2 static flags: ${SDL2_STATIC_LDFLAGS}")
+    message(STATUS "SDL2_ttf static flags: ${SDL2_TTF_STATIC_LDFLAGS}")
+else()
+    # Link dynamically
+    target_link_libraries(main ${SDL2_LIBRARIES} ${SDL2_TTF_LIBRARIES})
+    message(STATUS "Building with dynamic linking")
+endif()
 
 # Set optimization flags
 set_target_properties(main PROPERTIES COMPILE_FLAGS "-O2")
