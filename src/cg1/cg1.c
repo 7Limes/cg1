@@ -398,7 +398,7 @@ int run_file(const char *file_path, const char* flags) {
         return -1;
     }
 
-    run_program(&program_state, &flag_data);
+    return run_program(&program_state, &flag_data);
 }
 
 
