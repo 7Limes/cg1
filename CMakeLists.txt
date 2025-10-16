@@ -4,6 +4,14 @@ project(MyProject)
 # Option to enable static linking
 option(STATIC_BUILD "Build with static linking" OFF)
 
+# Detect if we're cross-compiling for Windows with MinGW
+if(WIN32 OR MINGW)
+    set(WINDOWS_BUILD TRUE)
+    message(STATUS "Configuring for Windows build (MinGW)")
+else()
+    set(WINDOWS_BUILD FALSE)
+endif()
+
 # Find the SDL2 package
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SDL2 REQUIRED sdl2)
@@ -11,7 +19,7 @@ pkg_check_modules(SDL2_TTF REQUIRED SDL2_ttf)
 
 # Include directories for headers
 include_directories(
-    ${SDL2_INCLUDE_DIR}
+    ${SDL2_INCLUDE_DIRS}
     src/cg1
     src/cjson
     src/instruction
@@ -53,7 +61,7 @@ if(ENABLE_G1_LOG_INSTRUCTION)
 endif()
 
 # Option for embedded program
-option(G1_EMBEDDED "Compile with an embedded program" ON)
+option(G1_EMBEDDED "Compile with an embedded program" OFF)
 if(G1_EMBEDDED)
     add_definitions(-DG1_EMBEDDED)
 endif()
@@ -73,7 +81,6 @@ else()
     add_definitions(-DG1_FLAG_SCALE=${G1_FLAG_SCALE})
 endif()
 
-
 # Set the build type for optimization (-O2 equivalent)
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -82,33 +89,66 @@ endif()
 # Create an executable target
 add_executable(main ${SOURCES})
 
-# Configure linking based on STATIC_BUILD option
+if(WINDOWS_BUILD AND CMAKE_BUILD_TYPE STREQUAL "Release")
+    # Hide the console window on Windows
+    target_link_options(main PRIVATE -mwindows)
+endif()
+
+# Configure linking based on platform and STATIC_BUILD option
 if(STATIC_BUILD)
-    # Get static linking flags using pkg-config
-    execute_process(
-        COMMAND pkg-config --libs --static sdl2
-        OUTPUT_VARIABLE SDL2_STATIC_LDFLAGS
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    execute_process(
-        COMMAND pkg-config --libs --static SDL2_ttf
-        OUTPUT_VARIABLE SDL2_TTF_STATIC_LDFLAGS
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    
-    # Link with static flags
-    target_link_libraries(main ${SDL2_STATIC_LDFLAGS} ${SDL2_TTF_STATIC_LDFLAGS})
-    
-    # Static linking flags for gcc/g++
-    target_link_options(main PRIVATE -static-libgcc -static-libstdc++)
-    
-    message(STATUS "Building with static linking")
-    message(STATUS "SDL2 static flags: ${SDL2_STATIC_LDFLAGS}")
-    message(STATUS "SDL2_ttf static flags: ${SDL2_TTF_STATIC_LDFLAGS}")
+    if(WINDOWS_BUILD)
+        # Windows static linking with MinGW
+        execute_process(
+            COMMAND ${PKG_CONFIG_EXECUTABLE} --libs --static sdl2
+            OUTPUT_VARIABLE SDL2_STATIC_LDFLAGS
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        execute_process(
+            COMMAND ${PKG_CONFIG_EXECUTABLE} --libs --static SDL2_ttf
+            OUTPUT_VARIABLE SDL2_TTF_STATIC_LDFLAGS
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        
+        target_link_libraries(main ${SDL2_STATIC_LDFLAGS} ${SDL2_TTF_STATIC_LDFLAGS})
+        
+        # Add additional Windows static libraries if needed
+        target_link_options(main PRIVATE 
+            -static-libgcc 
+            -static-libstdc++
+            -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive
+        )
+        
+        message(STATUS "Building for Windows with static linking")
+        message(STATUS "SDL2 static flags: ${SDL2_STATIC_LDFLAGS}")
+        message(STATUS "SDL2_ttf static flags: ${SDL2_TTF_STATIC_LDFLAGS}")
+    else()
+        # Linux static linking
+        execute_process(
+            COMMAND pkg-config --libs --static sdl2
+            OUTPUT_VARIABLE SDL2_STATIC_LDFLAGS
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        execute_process(
+            COMMAND pkg-config --libs --static SDL2_ttf
+            OUTPUT_VARIABLE SDL2_TTF_STATIC_LDFLAGS
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        
+        target_link_libraries(main ${SDL2_STATIC_LDFLAGS} ${SDL2_TTF_STATIC_LDFLAGS})
+        target_link_options(main PRIVATE -static-libgcc -static-libstdc++)
+        
+        message(STATUS "Building for Linux with static linking")
+        message(STATUS "SDL2 static flags: ${SDL2_STATIC_LDFLAGS}")
+        message(STATUS "SDL2_ttf static flags: ${SDL2_TTF_STATIC_LDFLAGS}")
+    endif()
 else()
-    # Link dynamically
+    # Dynamic linking
     target_link_libraries(main ${SDL2_LIBRARIES} ${SDL2_TTF_LIBRARIES})
-    message(STATUS "Building with dynamic linking")
+    if(WINDOWS_BUILD)
+        message(STATUS "Building for Windows with dynamic linking")
+    else()
+        message(STATUS "Building for Linux with dynamic linking")
+    endif()
 endif()
 
 # Set optimization flags

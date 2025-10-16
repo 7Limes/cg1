@@ -1,0 +1,23 @@
+# mingw-w64-toolchain.cmake
+set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_PROCESSOR x86_64)
+
+set(TOOLCHAIN_PREFIX x86_64-w64-mingw32)
+
+set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)
+set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-g++)
+set(CMAKE_RC_COMPILER ${TOOLCHAIN_PREFIX}-windres)
+
+set(CMAKE_FIND_ROOT_PATH /usr/lib/gcc/${TOOLCHAIN_PREFIX}/13-win32)
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+
+# Completely disable system include paths
+set(CMAKE_C_COMPILER_FORCED TRUE)
+set(CMAKE_CXX_COMPILER_FORCED TRUE)
+
+# Use regular pkg-config but point it to MinGW's .pc files
+set(ENV{PKG_CONFIG_PATH} "/usr/${TOOLCHAIN_PREFIX}/lib/pkgconfig")
+set(ENV{PKG_CONFIG_LIBDIR} "/usr/${TOOLCHAIN_PREFIX}/lib/pkgconfig")
+set(PKG_CONFIG_EXECUTABLE "/usr/bin/pkg-config")
