@@ -81,6 +81,9 @@ else()
     add_definitions(-DG1_FLAG_SCALE=${G1_FLAG_SCALE})
 endif()
 
+set(G1_FLAG_TITLE "cg1" CACHE STRING "(EMBEDDED ONLY) The title of the output window")
+add_definitions(-DG1_FLAG_TITLE="${G1_FLAG_TITLE}")
+
 # Set the build type for optimization (-O2 equivalent)
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)

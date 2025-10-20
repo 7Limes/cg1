@@ -8,11 +8,13 @@
 #include <stdbool.h>
 
 #define FLAG_BUFFER_SIZE 128
+#define TITLE_BUFFER_SIZE 64
 
 
 struct FlagData {
     bool show_fps;
     uint32_t pixel_size;
+    char title[TITLE_BUFFER_SIZE];
 };
 
 

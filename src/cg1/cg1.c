@@ -95,12 +95,17 @@ void print_sdl_error(const char *message) {
 }
 
 
-SDL_Window* create_window(uint32_t width, uint32_t height) {
+SDL_Window* create_window(uint32_t width, uint32_t height, const char *title) {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
         print_sdl_error("Failed to initialize SDL");
         return NULL;
     }
-    SDL_Window *win = SDL_CreateWindow("cg1", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_SHOWN);
+
+    if (title[0] == '\0') {
+        title = "cg1";
+    }
+
+    SDL_Window *win = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_SHOWN);
 
     if (!win) {
         print_sdl_error("Failed to create window");
@@ -144,7 +149,7 @@ void quit_sdl(ProgramContext *program_context) {
 
 
 int init_sdl(ProgramContext *program_context, uint32_t window_width, uint32_t window_height, struct FlagData *flags) {
-    program_context->win = create_window(window_width, window_height);
+    program_context->win = create_window(window_width, window_height, flags->title);
     if (!program_context->win) {
         print_sdl_error("Failed to create SDL window");
         return -1;
@@ -404,7 +409,7 @@ int run_file(const char *file_path, const char* flags) {
 
 int run_embedded() {
     #ifdef G1_EMBEDDED
-        struct FlagData flag_data = {G1_FLAG_SHOW_FPS, G1_FLAG_SCALE};
+        struct FlagData flag_data = {G1_FLAG_SHOW_FPS, G1_FLAG_SCALE, G1_FLAG_TITLE};
         ProgramData program_data = {0};
         ProgramContext program_context = {0};
         ProgramState program_state = {&program_data, &program_context};

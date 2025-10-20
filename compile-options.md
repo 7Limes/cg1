@@ -25,3 +25,5 @@ These variables will only be used if `-DG1_EMBEDDED` is set.
   - Whether the framerate label should be displayed at runtime.
 - `-DG1_FLAG_SCALE` (Default: `1`)
   - The scale factor to use for the output buffer.
+- `-DG1_FLAG_TITLE` (Default: `cg1`)
+  - The title of the output window.

@@ -7,7 +7,7 @@
 int main_cli(int argc, char* argv[]) {
     char flags[FLAG_BUFFER_SIZE] = "";
     if (argc == 1) {
-        printf("usage: cg1 [--show_fps] [--scale SCALE] program_path\n");
+        printf("usage: cg1 program_path [--show_fps] [--scale SCALE] [--title TITLE]\n");
         return 1;
     }
     

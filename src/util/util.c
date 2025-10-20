@@ -101,7 +101,7 @@ cJSON* json_from_file(const char *file_path) {
 bool safecat(char* dest, char* src, int size) {
     if (strlen(dest) + strlen(src) >= size)
         return false;
-    strncat(dest, src, size-1);  // size-1 to avoid compiler warning on O2
+    strncat(dest, src, size-1);
     return true;
 }
 
