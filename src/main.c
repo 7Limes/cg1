@@ -1,7 +1,11 @@
 #include <stdio.h>
+#include <string.h>
 #include "util.h"
 #include "flags.h"
 #include "cg1.h"
+
+
+const char *CG1_VERSION = "1.0.0";
 
 
 int main_cli(int argc, char* argv[]) {
@@ -21,6 +25,11 @@ int main_cli(int argc, char* argv[]) {
                 return 2;
             }
         }
+    }
+
+    if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-v") == 0) {
+        printf("cg1 VM %s\n", CG1_VERSION);
+        return 0;
     }
     
     if (!file_exists(argv[1])) {
