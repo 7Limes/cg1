@@ -117,7 +117,7 @@ if(STATIC_BUILD)
         # Add additional Windows static libraries if needed
         target_link_options(main PRIVATE 
             -static-libgcc 
-            -static-libstdc++
+            -static-libstdc++ 
             -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive
         )
         
@@ -138,7 +138,11 @@ if(STATIC_BUILD)
         )
         
         target_link_libraries(main ${SDL2_STATIC_LDFLAGS} ${SDL2_TTF_STATIC_LDFLAGS})
-        target_link_options(main PRIVATE -static-libgcc -static-libstdc++)
+        target_link_options(main PRIVATE 
+            -static-libgcc 
+            -static-libstdc++ 
+            -Wl,-Bstatic,--whole-archive -lSDL2 -lSDL2_ttf -Wl,-Bdynamic,--no-whole-archive
+        )
         
         message(STATUS "Building for Linux with static linking")
         message(STATUS "SDL2 static flags: ${SDL2_STATIC_LDFLAGS}")
