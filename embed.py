@@ -59,13 +59,14 @@ def main():
     parser.add_argument('--show_fps', '-f', action='store_true')
     parser.add_argument('--scale', '-s', default=1)
     parser.add_argument('--title', '-t', type=str, default='cg1', help='The title of the output window')
-    parser.add_argument('--static', '-st', action='store_false', help='Enable static linking')
+    parser.add_argument('--dynamic', '-d', action='store_true', help='Enable dynamic linking')
     parser.add_argument('--windows', '-win', action='store_true', help='Build for Windows')
 
     args = parser.parse_args()
 
     try:
-        build(args.input_path, args.output_path, args.show_fps, args.scale, args.title, args.static, args.windows)
+        do_static_build = not args.dynamic
+        build(args.input_path, args.output_path, args.show_fps, args.scale, args.title, do_static_build, args.windows)
     except FileNotFoundError as e:
         print(e)
         return 1
