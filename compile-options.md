@@ -12,8 +12,6 @@
 - `-DENABLE_G1_RUNTIME_ERRORS` (Default: `ON`)
   - Controls whether runtime errors will be raised during program execution. If this option is disabled, the program will continue to run even if a runtime error occurs.
   - Disabling this option can cause segfaults. Use at your own risk!
-- `-DENABLE_G1_LOG_INSTRUCTION` (Default: `ON`)
-  - Whether the log instruction should print to stdout.
 - `-DENABLE_G1_GPU_RENDERING` (Default: `OFF`)
   - Enable hardware accelerated primitive drawing. Should only be used if the window is being cleared and redrawn each tick.
 

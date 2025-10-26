@@ -54,12 +54,6 @@ if(ENABLE_G1_GPU_RENDERING)
     add_definitions(-DENABLE_G1_GPU_RENDERING)
 endif()
 
-# Option to enable log instruction
-option(ENABLE_G1_LOG_INSTRUCTION "Enable log instruction" ON)
-if(ENABLE_G1_LOG_INSTRUCTION)
-    add_definitions(-DENABLE_G1_LOG_INSTRUCTION)
-endif()
-
 # Option for embedded program
 option(G1_EMBEDDED "Compile with an embedded program" OFF)
 if(G1_EMBEDDED)

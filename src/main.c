@@ -5,7 +5,7 @@
 #include "cg1.h"
 
 
-const char *CG1_VERSION = "1.0.0";
+const char *CG1_VERSION = "1.0.1";
 
 
 int main_cli(int argc, char* argv[]) {

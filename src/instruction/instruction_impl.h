@@ -276,11 +276,7 @@ static inline int run_instruction(ProgramContext *program_context, const Instruc
         case OP_RECT:
             return _ins_rect(program_context, args);
         case OP_LOG:
-            #ifdef ENABLE_G1_LOG_INSTRUCTION
-                return _ins_log(program_context, args);
-            #else
-                return 0;
-            #endif
+            return _ins_log(program_context, args);
         case OP_GETP:
             return _ins_getp(program_context, args);
         case OP_SETCH:
