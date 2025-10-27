@@ -27,7 +27,7 @@ const char *INSTRUCTIONS[AMOUNT_INSTRUCTIONS] = {
     "point",
     "line",
     "rect",
-    "log",
+    "putc",
     "getp",
     "setch"
 };

@@ -162,8 +162,8 @@ static inline int _ins_rect(ProgramContext *program_context, int32_t *args) {
     return 0;
 }
 
-static inline int _ins_log(ProgramContext *program_context, int32_t *args) {
-    printf("%d\n", args[0]);
+static inline int _ins_putc(ProgramContext *program_context, int32_t *args) {
+    putchar((char) args[0]);
     return 0;
 }
 
@@ -275,8 +275,8 @@ static inline int run_instruction(ProgramContext *program_context, const Instruc
             return _ins_line(program_context, args);
         case OP_RECT:
             return _ins_rect(program_context, args);
-        case OP_LOG:
-            return _ins_log(program_context, args);
+        case OP_PUTC:
+            return _ins_putc(program_context, args);
         case OP_GETP:
             return _ins_getp(program_context, args);
         case OP_SETCH:

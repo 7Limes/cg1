@@ -24,7 +24,7 @@
 #define OP_POINT 12
 #define OP_LINE 13
 #define OP_RECT 14
-#define OP_LOG 15
+#define OP_PUTC 15
 #define OP_GETP 16
 #define OP_SETCH 17
 
