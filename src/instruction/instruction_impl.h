@@ -233,55 +233,108 @@ static inline int _parse_arguments(int32_t *parsed_arguments, ProgramContext *pr
 }
 
 
-// Runs a single instruction.
-static inline int run_instruction(ProgramContext *program_context, const Instruction *ins) {
-    // Parse instruction arguments
-    byte argument_count = ARGUMENT_COUNTS[ins->opcode];
-    int32_t args[INSTRUCTION_ARGUMENT_BUFFER_SIZE];
-    int parse_args_response = _parse_arguments(args, program_context, ins->arguments, argument_count);
-    if (parse_args_response < 0) {
-        return -1;
-    }
+int run_program_thread(const ProgramState *program_state, size_t index) {
+    static void *dispatch_table[] = {
+        &&do_mov, &&do_movp,
+        &&do_add, &&do_sub, &&do_mul, &&do_div, &&do_mod,
+        &&do_less, &&do_equal, &&do_not,
+        &&do_jmp,
+        &&do_color, &&do_point, &&do_line, &&do_rect,
+        &&do_putc, &&do_getp, &&do_setch
+    };
     
+    ProgramContext *program_context = program_state->context;
+    ProgramData *program_data = program_state->data;
+    Instruction *instructions = program_data->instructions;
+    
+    program_context->program_counter = index-1;
+    size_t instruction_count = program_data->instruction_count;
+
+    Instruction *next_instruction;
+    int32_t args[INSTRUCTION_ARGUMENT_BUFFER_SIZE];
+    int instruction_response;
+
+    dispatch:
+        #ifdef ENABLE_G1_RUNTIME_ERRORS
+        if (instruction_response) {
+            return -1;
+        }
+        #endif
+
+        next_instruction = &instructions[++program_context->program_counter];
+        if (program_context->program_counter > instruction_count) {
+            return 0;
+        }
+
+        // Parse instruction arguments
+        byte argument_count = ARGUMENT_COUNTS[next_instruction->opcode];
+        int parse_args_response = _parse_arguments(args, program_context, next_instruction->arguments, argument_count);
+
+        #ifdef ENABLE_G1_RUNTIME_ERRORS
+        if (parse_args_response < 0) {
+            return -1;
+        }
+        #endif
+
+        goto *dispatch_table[next_instruction->opcode];
+        
     // Run the corresponding instruction
-    switch (ins->opcode) {
-        case OP_MOV:
-            return _ins_mov(program_context, args);
-        case OP_MOVP:
-            return _ins_movp(program_context, args);
-        case OP_ADD:
-            return _ins_add(program_context, args);
-        case OP_SUB:
-            return _ins_sub(program_context, args);
-        case OP_MUL:
-            return _ins_mul(program_context, args);
-        case OP_DIV:
-            return _ins_div(program_context, args);
-        case OP_MOD:
-            return _ins_mod(program_context, args);
-        case OP_LESS:
-            return _ins_less(program_context, args);
-        case OP_EQUAL:
-            return _ins_equal(program_context, args);
-        case OP_NOT:
-            return _ins_not(program_context, args);
-        case OP_JMP:
-            return _ins_jmp(program_context, args);
-        case OP_COLOR:
-            return _ins_color(program_context, args);
-        case OP_POINT:
-            return _ins_point(program_context, args);
-        case OP_LINE:
-            return _ins_line(program_context, args);
-        case OP_RECT:
-            return _ins_rect(program_context, args);
-        case OP_PUTC:
-            return _ins_putc(program_context, args);
-        case OP_GETP:
-            return _ins_getp(program_context, args);
-        case OP_SETCH:
-            return _ins_setch(program_context, args);
-    }
+    do_mov:
+        instruction_response = _ins_mov(program_context, args);
+        goto dispatch;
+    do_movp:
+        instruction_response = _ins_movp(program_context, args);
+        goto dispatch;
+    do_add:
+        instruction_response = _ins_add(program_context, args);
+        goto dispatch;
+    do_sub:
+        instruction_response = _ins_sub(program_context, args);
+        goto dispatch;
+    do_mul:
+        instruction_response = _ins_mul(program_context, args);
+        goto dispatch;
+    do_div:
+        instruction_response = _ins_div(program_context, args);
+        goto dispatch;
+    do_mod:
+        instruction_response = _ins_mod(program_context, args);
+        goto dispatch;
+    do_less:
+        instruction_response = _ins_less(program_context, args);
+        goto dispatch;
+    do_equal:
+        instruction_response = _ins_equal(program_context, args);
+        goto dispatch;
+    do_not:
+        instruction_response = _ins_not(program_context, args);
+        goto dispatch;
+    do_jmp:
+        instruction_response = _ins_jmp(program_context, args);
+        goto dispatch;
+    do_color:
+        instruction_response = _ins_color(program_context, args);
+        goto dispatch;
+    do_point:
+        instruction_response = _ins_point(program_context, args);
+        goto dispatch;
+    do_line:
+        instruction_response = _ins_line(program_context, args);
+        goto dispatch;
+    do_rect:
+        instruction_response = _ins_rect(program_context, args);
+        goto dispatch;
+    do_putc:
+        instruction_response = _ins_putc(program_context, args);
+        goto dispatch;
+    do_getp:
+        instruction_response = _ins_getp(program_context, args);
+        goto dispatch;
+    do_setch:
+        instruction_response = _ins_setch(program_context, args);
+        goto dispatch;
+
+    return 0;
 }
 
 #endif

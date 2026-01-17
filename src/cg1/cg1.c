@@ -37,27 +37,6 @@ const int FPS_FONT_SIZE = 20;
 const uint16_t FPS_LABEL_DISPLAY_INTERVAL = 10;
 
 
-int run_program_thread(const ProgramState *program_state, size_t index, struct FlagData *flag_data) {
-    ProgramContext *program_context = program_state->context;
-    ProgramData *program_data = program_state->data;
-    
-    program_context->program_counter = index;
-    size_t instruction_count = program_data->instruction_count;
-    while (program_context->program_counter < instruction_count) {
-        Instruction instruction = program_data->instructions[program_context->program_counter];
-        
-        int instruction_response = run_instruction(program_context, &instruction);
-        if (instruction_response != 0) {
-            return -2;
-        }
-
-        program_context->program_counter++;
-    }
-
-    return 0;
-}
-
-
 void update_reserved_memory(const ProgramState *program_state, const Uint8 *keys, Uint64 delta_ms) {
     ProgramData *program_data = program_state->data;
     int32_t values[] = {
@@ -287,7 +266,7 @@ int program_tick_loop(ProgramState *program_state, const Uint8 *keyboard, struct
         SDL_PumpEvents();
         
         update_reserved_memory(program_state, keyboard, delta_ms);
-        int run_thread_response = run_program_thread(program_state, program_data->tick_index, flag_data);
+        int run_thread_response = run_program_thread(program_state, program_data->tick_index);
         if (run_thread_response < 0) {
             return -1;
         }
@@ -362,7 +341,7 @@ int run_program(ProgramState *program_state, struct FlagData *flag_data) {
     // Jump to start label if it is there
     if (program_data->start_index != -1) {
         update_reserved_memory(program_state, keyboard, 0);
-        int run_thread_response = run_program_thread(program_state, program_data->start_index, flag_data);
+        int run_thread_response = run_program_thread(program_state, program_data->start_index);
         if (run_thread_response < 0) {
             quit_sdl(program_context);
             free_program_state(program_state);
