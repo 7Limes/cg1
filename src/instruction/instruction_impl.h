@@ -262,7 +262,7 @@ int run_program_thread(const ProgramState *program_state, size_t index) {
         #endif
 
         next_instruction = &instructions[++program_context->program_counter];
-        if (program_context->program_counter > instruction_count) {
+        if (program_context->program_counter >= instruction_count) {
             return 0;
         }
 
