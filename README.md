@@ -10,10 +10,52 @@ To this end, the g1 ISA consists of 18 instructions which operate directly on a 
 
 g1 programs will always include an arbitrarily sized, 24-bit color window as well as 8 configurable audio channels.
 
-## Table of Contents
+## Building
+
+### Requirements
+
+- gcc
+- cmake
+- sdl2
+- sdl2_ttf
+
+### Optional Requirements
+
+- mingw-w64 (if cross compiling for Windows)
+
+### Build Instructions
+
+1. Clone the repo
+2. Run `cmake -B build`
+3. Run `cmake --build build`
+4. Executable is at `./build/cg1`
+
+
+## Embedded Building
+
+cg1 supports embedding of compiled g1 programs within the virtual machine executable, allowing for standalone executables to be built.
+
+### Requirements
+
+- python3
+- Static builds of sdl2 and sdl2_ttf (if building statically)
+- mingw-w64 (if cross compiling for Windows)
+
+### Embedded Build Instructions
+
+The `embed.py` script has been provided to assist with this process. It will automatically configure and build an embedded executable.
+
+1. Assemble a g1 program into a `.g1b` file.
+2. Run `python3 embed.py myprogram.g1b myprogram.x`
+
+By default, this will compile a dynamically linked executable.
+
+Run `python3 embed.py -h` for a list of additional flags and options.
+
+## Documentation Table of Contents
 - [g1](#g1)
   - [Summary](#summary)
-  - [Table of Contents](#table-of-contents)
+  - [Table of Contents](#documentation-table-of-contents)
   - [Program Metadata](#program-metadata)
   - [Program Memory](#program-memory)
     - [Reserved Memory](#reserved-memory)

@@ -84,11 +84,11 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Create an executable target
-add_executable(main ${SOURCES})
+add_executable(cg1 ${SOURCES})
 
 if(WINDOWS_BUILD AND CMAKE_BUILD_TYPE STREQUAL "Release")
     # Hide the console window on Windows
-    target_link_options(main PRIVATE -mwindows)
+    target_link_options(cg1 PRIVATE -mwindows)
 endif()
 
 # Configure linking based on platform and STATIC_BUILD option
@@ -106,10 +106,10 @@ if(STATIC_BUILD)
             OUTPUT_STRIP_TRAILING_WHITESPACE
         )
         
-        target_link_libraries(main ${SDL2_STATIC_LDFLAGS} ${SDL2_TTF_STATIC_LDFLAGS})
+        target_link_libraries(cg1 ${SDL2_STATIC_LDFLAGS} ${SDL2_TTF_STATIC_LDFLAGS})
         
         # Add additional Windows static libraries if needed
-        target_link_options(main PRIVATE 
+        target_link_options(cg1 PRIVATE 
             -static-libgcc 
             -static-libstdc++ 
             -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive
@@ -131,8 +131,8 @@ if(STATIC_BUILD)
             OUTPUT_STRIP_TRAILING_WHITESPACE
         )
         
-        target_link_libraries(main ${SDL2_STATIC_LDFLAGS} ${SDL2_TTF_STATIC_LDFLAGS})
-        target_link_options(main PRIVATE 
+        target_link_libraries(cg1 ${SDL2_STATIC_LDFLAGS} ${SDL2_TTF_STATIC_LDFLAGS})
+        target_link_options(cg1 PRIVATE 
             -static-libgcc 
             -static-libstdc++ 
             -Wl,-Bstatic,--whole-archive -lSDL2 -lSDL2_ttf -Wl,-Bdynamic,--no-whole-archive
@@ -144,7 +144,7 @@ if(STATIC_BUILD)
     endif()
 else()
     # Dynamic linking
-    target_link_libraries(main ${SDL2_LIBRARIES} ${SDL2_TTF_LIBRARIES})
+    target_link_libraries(cg1 ${SDL2_LIBRARIES} ${SDL2_TTF_LIBRARIES})
     if(WINDOWS_BUILD)
         message(STATUS "Building for Windows with dynamic linking")
     else()
@@ -153,4 +153,4 @@ else()
 endif()
 
 # Set optimization flags
-set_target_properties(main PROPERTIES COMPILE_FLAGS "-O2")
+set_target_properties(cg1 PROPERTIES COMPILE_FLAGS "-O2")
