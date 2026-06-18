@@ -296,16 +296,18 @@ end:
 
 ## Data Format
 
-To include additional data alongside program code, a program can be assembled with a g1 data file, which contains a list of data entries and where each entry should be placed in memory:
+To include additional data alongside program code, a program may include data entries at the start following the meta variable list.
 
 Here is the format for a single entry:
 ```g1d
-[memory address]: [data type] [operation] [data value]
+@[memory address] [data type] [operation] "[data string]"
 ```
+
+The resulting data will be placed starting at `memory address`.
 
 ### Data Type
 
-`data type` determines how `data value` should be parsed into bytes.
+`data type` determines how `data string` should be parsed into bytes.
 
 Options:
 - `file`
@@ -326,3 +328,9 @@ Options:
   - Packs every group of 4 bytes into a single integer.
 - `img`
   - Tries to parse bytes as an image. If successful, the width and height of the image will be added to the list, followed by `width * height` integers consisting of each pixel's packed rgb values.
+
+
+### Extra Notes
+
+- Any data loaded in this way IS NOT read-only. This data can be overwritten at runtime.
+- The assembler will send a warning if any of the data entries overlap.
